@@ -695,21 +695,21 @@ impl fmt::Display for FinalOutput {
         write!(
             f,
             "Token usage: total={} input={}{} output={}{}",
-            format_with_separators(token_usage.blended_total()),
-            format_with_separators(token_usage.non_cached_input()),
+            format_with_separators(token_usage.blended_total() as i64),
+            format_with_separators(token_usage.non_cached_input() as i64),
             if token_usage.cached_input() > 0 {
                 format!(
                     " (+ {} cached)",
-                    format_with_separators(token_usage.cached_input())
+                    format_with_separators(token_usage.cached_input() as i64)
                 )
             } else {
                 String::new()
             },
-            format_with_separators(token_usage.output_tokens),
+            format_with_separators(token_usage.output_tokens as i64),
             if token_usage.reasoning_output_tokens > 0 {
                 format!(
                     " (reasoning {})",
-                    format_with_separators(token_usage.reasoning_output_tokens)
+                    format_with_separators(token_usage.reasoning_output_tokens as i64)
                 )
             } else {
                 String::new()
