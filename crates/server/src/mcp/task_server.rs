@@ -14,7 +14,8 @@ use db::models::{
 use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
-    handler::server::tool::{Parameters, ToolRouter},
+    handler::server::tool::ToolRouter,
+    handler::server::wrapper::Parameters,
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, ProtocolVersion,
         ServerCapabilities, ServerInfo,
@@ -375,6 +376,9 @@ impl TaskServer {
             server_info: Implementation {
                 name: "automagik-forge".to_string(),
                 version: "1.0.0".to_string(),
+                title: None,
+                icons: None,
+                website_url: None,
             },
             instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'start_task_attempt', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids.".to_string()),
         }
