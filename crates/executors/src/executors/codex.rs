@@ -199,16 +199,16 @@ impl Codex {
 
         NewConversationParams {
             model: self.model.clone(),
+            model_provider: None,
             profile: self.profile.clone(),
             cwd: Some(cwd.to_string_lossy().to_string()),
             approval_policy,
             sandbox,
             config: self.build_config_overrides(),
             base_instructions: self.base_instructions.clone(),
-            include_apply_patch_tool: self.include_apply_patch_tool,
-            model_provider: None,
             developer_instructions: None,
             compact_prompt: None,
+            include_apply_patch_tool: self.include_apply_patch_tool,
         }
     }
 

@@ -28,17 +28,46 @@ impl DBService {
                     let abs_path = std::env::current_dir()
                         .unwrap_or_else(|_| PathBuf::from("."))
                         .join(path_part);
-                    format!("sqlite://{}", abs_path.to_string_lossy())
+                    Self::format_sqlite_url(&abs_path)
                 }
             } else {
                 db_url
             }
         } else {
             // Default to asset_dir/db.sqlite
-            format!(
-                "sqlite://{}",
-                asset_dir().join("db.sqlite").to_string_lossy()
-            )
+            let db_path = asset_dir().join("db.sqlite");
+            Self::format_sqlite_url(&db_path)
+        }
+    }
+
+    /// Format a path as a proper SQLite URL
+    /// SQLite URL format: sqlite:// + path
+    /// For absolute paths on Unix (starting with /), this results in sqlite:///path (3 slashes)
+    /// For Windows paths, this results in sqlite://C:/path
+    fn format_sqlite_url(path: &PathBuf) -> String {
+        // Ensure the path is absolute
+        let abs_path = if path.is_absolute() {
+            path.clone()
+        } else {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(path)
+        };
+
+        let abs_path_str = abs_path.to_string_lossy();
+
+        // SQLite URL format: sqlite:// followed by the path
+        // For Unix absolute paths (/home/...), this becomes sqlite:///home/...
+        // The third slash is the root directory indicator
+        if abs_path_str.starts_with('/') {
+            // Unix absolute path - sqlite:// + /path = sqlite:///path
+            format!("sqlite://{}", abs_path_str)
+        } else if abs_path_str.len() >= 2 && abs_path_str.chars().nth(1) == Some(':') {
+            // Windows absolute path (C:\...) - needs special handling
+            format!("sqlite:///{}", abs_path_str)
+        } else {
+            // Fallback - treat as relative (shouldn't happen after is_absolute check)
+            format!("sqlite://{}", abs_path_str)
         }
     }
 

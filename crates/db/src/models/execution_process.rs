@@ -31,7 +31,6 @@ pub enum ExecutionProcessError {
 #[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS)]
 #[sqlx(type_name = "execution_process_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-#[ts(use_ts_enum)]
 pub enum ExecutionProcessStatus {
     Running,
     Completed,

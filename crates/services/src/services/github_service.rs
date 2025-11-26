@@ -13,7 +13,6 @@ use crate::services::{git::GitServiceError, git_cli::GitCliError};
 
 #[derive(Debug, Error, Serialize, Deserialize, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[ts(use_ts_enum)]
 pub enum GitHubServiceError {
     #[ts(skip)]
     #[serde(skip)]

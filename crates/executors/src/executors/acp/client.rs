@@ -68,8 +68,8 @@ impl acp::Client for AcpClient {
     async fn session_notification(&self, args: acp::SessionNotification) -> Result<(), acp::Error> {
         // Convert to typed events
         let event = match args.update {
-            acp::SessionUpdate::AgentMessageChunk { content } => Some(AcpEvent::Message(content)),
-            acp::SessionUpdate::AgentThoughtChunk { content } => Some(AcpEvent::Thought(content)),
+            acp::SessionUpdate::AgentMessageChunk(chunk) => Some(AcpEvent::Message(chunk.content)),
+            acp::SessionUpdate::AgentThoughtChunk(chunk) => Some(AcpEvent::Thought(chunk.content)),
             acp::SessionUpdate::ToolCall(tc) => Some(AcpEvent::ToolCall(tc)),
             acp::SessionUpdate::ToolCallUpdate(update) => Some(AcpEvent::ToolUpdate(update)),
             acp::SessionUpdate::Plan(plan) => Some(AcpEvent::Plan(plan)),

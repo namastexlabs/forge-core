@@ -35,7 +35,6 @@ pub mod qwen;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[ts(use_ts_enum)]
 pub enum BaseAgentCapability {
     SessionFork,
     /// Agent requires a setup script before it can run (e.g., login, installation)
@@ -79,7 +78,6 @@ pub enum ExecutorError {
     // Only add Hash; Eq/PartialEq are already provided by EnumDiscriminants.
     derive(EnumString, Hash, strum_macros::Display, Serialize, Deserialize, TS, Type),
     strum(serialize_all = "SCREAMING_SNAKE_CASE"),
-    ts(use_ts_enum),
     serde(rename_all = "SCREAMING_SNAKE_CASE"),
     sqlx(type_name = "TEXT", rename_all = "SCREAMING_SNAKE_CASE")
 )]

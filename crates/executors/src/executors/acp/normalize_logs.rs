@@ -625,16 +625,16 @@ impl TryFrom<SessionNotification> for AcpEvent {
 
     fn try_from(notification: SessionNotification) -> Result<Self, ()> {
         let event = match notification.update {
-            acp::SessionUpdate::AgentMessageChunk { content } => AcpEvent::Message(content),
-            acp::SessionUpdate::AgentThoughtChunk { content } => AcpEvent::Thought(content),
+            acp::SessionUpdate::AgentMessageChunk(chunk) => AcpEvent::Message(chunk.content),
+            acp::SessionUpdate::AgentThoughtChunk(chunk) => AcpEvent::Thought(chunk.content),
             acp::SessionUpdate::ToolCall(tc) => AcpEvent::ToolCall(tc),
             acp::SessionUpdate::ToolCallUpdate(update) => AcpEvent::ToolUpdate(update),
             acp::SessionUpdate::Plan(plan) => AcpEvent::Plan(plan),
-            acp::SessionUpdate::AvailableCommandsUpdate { available_commands } => {
-                AcpEvent::AvailableCommands(available_commands)
+            acp::SessionUpdate::AvailableCommandsUpdate(update) => {
+                AcpEvent::AvailableCommands(update.available_commands)
             }
-            acp::SessionUpdate::CurrentModeUpdate { current_mode_id } => {
-                AcpEvent::CurrentMode(current_mode_id)
+            acp::SessionUpdate::CurrentModeUpdate(update) => {
+                AcpEvent::CurrentMode(update.current_mode_id)
             }
             _ => return Err(()),
         };

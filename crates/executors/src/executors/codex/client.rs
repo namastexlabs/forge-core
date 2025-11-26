@@ -99,9 +99,9 @@ impl AppServerClient {
             request_id: self.next_request_id(),
             params: ResumeConversationParams {
                 path: Some(rollout_path),
-                overrides: Some(overrides),
                 conversation_id: None,
                 history: None,
+                overrides: Some(overrides),
             },
         };
         self.send_request(request, "resumeConversation").await

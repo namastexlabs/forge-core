@@ -272,6 +272,11 @@ impl AcpAgentHarness {
                                     terminal: false,
                                     meta: None,
                                 },
+                                client_info: Some(proto::Implementation {
+                                    name: "forge-core".to_string(),
+                                    title: Some("Automagik Forge".to_string()),
+                                    version: env!("CARGO_PKG_VERSION").to_string(),
+                                }),
                                 meta: None,
                             })
                             .await;
