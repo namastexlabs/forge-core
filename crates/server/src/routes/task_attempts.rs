@@ -134,6 +134,8 @@ pub struct CreateTaskAttemptBody {
     /// Executor profile specification
     pub executor_profile_id: ExecutorProfileId,
     pub base_branch: String,
+    /// Whether to use a git worktree for isolation (default: true)
+    pub use_worktree: Option<bool>,
 }
 
 impl CreateTaskAttemptBody {
@@ -178,6 +180,17 @@ pub async fn create_task_attempt(
         payload.task_id,
     )
     .await?;
+
+    // Insert worktree config if explicitly specified (defaults to true when not present)
+    if let Some(use_worktree) = payload.use_worktree {
+        sqlx::query(
+            "INSERT INTO forge_task_attempt_config (task_attempt_id, use_worktree) VALUES (?, ?)",
+        )
+        .bind(attempt_id.to_string())
+        .bind(use_worktree)
+        .execute(&deployment.db().pool)
+        .await?;
+    }
 
     if let Err(err) = deployment
         .container()
