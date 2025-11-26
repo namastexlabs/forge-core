@@ -70,7 +70,7 @@ fn initialize_repo_without_user_creates_initial_commit() {
         assert!(name.is_some() && email.is_some());
     } else {
         assert_eq!(name.as_deref(), Some("Automagik Forge"));
-        assert_eq!(email.as_deref(), Some("noreply@vibekanban.com"));
+        assert_eq!(email.as_deref(), Some("genie@namastex.ai"));
     }
 }
 
@@ -536,7 +536,7 @@ fn delete_file_commit_has_author_without_user() {
         assert!(name.is_some() && email.is_some());
     } else {
         assert_eq!(name.as_deref(), Some("Automagik Forge"));
-        assert_eq!(email.as_deref(), Some("noreply@vibekanban.com"));
+        assert_eq!(email.as_deref(), Some("genie@namastex.ai"));
     }
 }
 
@@ -641,6 +641,6 @@ fn squash_merge_libgit2_sets_author_without_user() {
         assert!(name.is_some() && email.is_some());
     } else {
         assert_eq!(name.as_deref(), Some("Automagik Forge"));
-        assert_eq!(email.as_deref(), Some("noreply@vibekanban.com"));
+        assert_eq!(email.as_deref(), Some("genie@namastex.ai"));
     }
 }

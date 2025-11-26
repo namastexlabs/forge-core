@@ -8,13 +8,6 @@ members = [
     "crates/utils",
     "crates/local-deployment",
     "crates/deployment",
-    # Vendored codex dependencies (upgraded to v0.58.0)
-    "vendor/codex/codex-rs/protocol",
-    "vendor/codex/codex-rs/app-server-protocol",
-    "vendor/codex/codex-rs/mcp-types",
-    "vendor/codex/codex-rs/utils/git",
-    "vendor/codex/codex-rs/utils/image",
-    "vendor/codex/codex-rs/utils/cache",
 ]
 
 [workspace.package]
@@ -145,17 +138,13 @@ walkdir = "2.5.0"
 webbrowser = "1.0"
 which = "6"
 wildmatch = "2.5.0"
-
 wiremock = "0.6"
 zeroize = "1.8.2"
 
-# Vendored codex dependencies (upgraded to v0.58.0)
-codex-protocol = { path = "vendor/codex/codex-rs/protocol" }
-codex-app-server-protocol = { path = "vendor/codex/codex-rs/app-server-protocol" }
-mcp-types = { path = "vendor/codex/codex-rs/mcp-types" }
-codex-git = { path = "vendor/codex/codex-rs/utils/git" }
-codex-utils-image = { path = "vendor/codex/codex-rs/utils/image" }
-codex-utils-cache = { path = "vendor/codex/codex-rs/utils/cache" }
+# Codex dependencies from namastexlabs fork (v0.58.0 with schemars 1.0.4 patch)
+codex-protocol = { git = "https://github.com/namastexlabs/codex", branch = "main", package = "codex-protocol" }
+codex-app-server-protocol = { git = "https://github.com/namastexlabs/codex", branch = "main", package = "codex-app-server-protocol" }
+mcp-types = { git = "https://github.com/namastexlabs/codex", branch = "main", package = "mcp-types" }
 
 [workspace.lints]
 rust = {}

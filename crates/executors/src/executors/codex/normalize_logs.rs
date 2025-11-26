@@ -986,18 +986,12 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                 | EventMsg::Warning(..)
                 | EventMsg::DeprecationNotice(..)
                 | EventMsg::UndoStarted(..)
-                | EventMsg::UndoCompleted(..)
-                | EventMsg::BackgroundEvent(..)
-                | EventMsg::PatchApplyBegin(..)
-                | EventMsg::PatchApplyEnd(..)
-                | EventMsg::StreamError(..)
-                | EventMsg::PlanUpdate(..)
-                | EventMsg::ApplyPatchApprovalRequest(..)
+                | EventMsg::RawResponseItem(..)
                 | EventMsg::ItemStarted(..)
                 | EventMsg::ItemCompleted(..)
                 | EventMsg::AgentMessageContentDelta(..)
+                | EventMsg::UndoCompleted(..)
                 | EventMsg::ReasoningContentDelta(..)
-                | EventMsg::RawResponseItem(..)
                 | EventMsg::ReasoningRawContentDelta(..) => {}
             }
         }
