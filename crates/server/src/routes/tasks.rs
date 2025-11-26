@@ -209,6 +209,7 @@ pub async fn create_task_and_start(
         has_merged_attempt: false,
         last_attempt_failed: false,
         executor: task_attempt.executor,
+        attempt_count: 1, // First attempt for a newly created task
     })))
 }
 
