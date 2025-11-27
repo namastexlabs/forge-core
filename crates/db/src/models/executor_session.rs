@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct ExecutorSession {
     pub id: Uuid,
-    pub task_attempt_id: Uuid,
+    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
     pub session_id: Option<String>,     // External session ID from Claude/Amp
     pub prompt: Option<String>,         // The prompt sent to the executor
@@ -19,7 +19,7 @@ pub struct ExecutorSession {
 
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateExecutorSession {
-    pub task_attempt_id: Uuid,
+    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
     pub prompt: Option<String>,
 }
@@ -41,7 +41,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Option<Uuid>",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -66,7 +66,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Option<Uuid>",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -92,7 +92,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Option<Uuid>",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -117,7 +117,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Option<Uuid>",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -159,7 +159,7 @@ impl ExecutorSession {
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Option<Uuid>",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,

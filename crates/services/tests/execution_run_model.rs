@@ -9,7 +9,10 @@
 //! Note: These tests require DATABASE_URL to be set and migrations to run.
 //! Run with: cargo test --package services --test execution_run_model
 
-use db::{models::execution_run::ExecutionRun, DBService};
+use db::{
+    models::{execution_run::ExecutionRun, project::Project},
+    DBService,
+};
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -31,19 +34,20 @@ async fn setup_test_db() -> (DBService, TempDir) {
 /// Create a test project for ExecutionRun tests
 async fn create_test_project(pool: &sqlx::SqlitePool) -> Uuid {
     let project_id = Uuid::new_v4();
-    let now = chrono::Utc::now();
     // Use unique git_repo_path per project
     let git_repo_path = format!("/tmp/test-repo-{}", project_id);
 
-    sqlx::query(
-        r#"INSERT INTO projects (id, name, git_repo_path, created_at, updated_at)
-           VALUES (?, 'Test Project', ?, ?, ?)"#,
+    // Use Project::create instead of raw SQL
+    Project::create(
+        pool,
+        project_id,
+        "Test Project",
+        &git_repo_path,
+        None, // dev_script
+        None, // cleanup_script
+        None, // copy_files
+        None, // commit_prompt
     )
-    .bind(project_id)
-    .bind(&git_repo_path)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
     .await
     .unwrap();
 

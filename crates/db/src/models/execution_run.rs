@@ -221,7 +221,7 @@ impl ExecutionRun {
         run_id: Uuid,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE execution_runs SET worktree_deleted = TRUE, updated_at = datetime('now') WHERE id = ?",
+            "UPDATE execution_runs SET worktree_deleted = TRUE, updated_at = datetime('now', 'subsec') WHERE id = ?",
             run_id
         )
         .execute(pool)
