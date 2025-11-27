@@ -355,6 +355,10 @@ ACE (Agentic Context Engineering) ensures framework optimization is data-driven,
 - Feature branches → `dev` via PR
 - Stable releases: `dev` → `main`
 
+**Package Manager:** pnpm only
+- Use `pnpm` for all package operations
+- Never use `npm` - it is not allowed in this repository
+
 **Technical Implementation:** Code collective responsibility.
 
 ## Quality Standards
