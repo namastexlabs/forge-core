@@ -611,6 +611,7 @@ impl TaskServer {
             task_id,
             executor_profile_id,
             base_branch,
+            use_worktree: None, // Default to worktree execution
         };
 
         let url = self.url("/api/task-attempts");

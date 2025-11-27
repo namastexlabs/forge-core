@@ -139,6 +139,8 @@ pub struct CreateAndStartTaskRequest {
     pub task: CreateTask,
     pub executor_profile_id: ExecutorProfileId,
     pub base_branch: String,
+    /// Whether to use a git worktree for isolation (default: true)
+    pub use_worktree: Option<bool>,
 }
 
 pub async fn create_task_and_start(
@@ -180,6 +182,18 @@ pub async fn create_task_and_start(
         task.id,
     )
     .await?;
+
+    // Insert worktree config if explicitly specified (defaults to true when not present)
+    if let Some(use_worktree) = payload.use_worktree {
+        sqlx::query(
+            "INSERT INTO forge_task_attempt_config (task_attempt_id, use_worktree) VALUES (?, ?)",
+        )
+        .bind(attempt_id.to_string())
+        .bind(use_worktree)
+        .execute(&deployment.db().pool)
+        .await?;
+    }
+
     let is_attempt_running = deployment
         .container()
         .start_attempt(&task_attempt, payload.executor_profile_id.clone())
@@ -209,6 +223,7 @@ pub async fn create_task_and_start(
         has_merged_attempt: false,
         last_attempt_failed: false,
         executor: task_attempt.executor,
+        attempt_count: 1, // First attempt for a newly created task
     })))
 }
 

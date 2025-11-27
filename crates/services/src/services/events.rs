@@ -48,15 +48,10 @@ impl EventService {
         msg_store: Arc<MsgStore>,
         task_id: Uuid,
     ) -> Result<(), SqlxError> {
-        if let Some(task) = Task::find_by_id(pool, task_id).await? {
-            let tasks = Task::find_by_project_id_with_attempt_status(pool, task.project_id).await?;
-
-            if let Some(task_with_status) = tasks
-                .into_iter()
-                .find(|task_with_status| task_with_status.id == task_id)
-            {
-                msg_store.push_patch(task_patch::replace(&task_with_status));
-            }
+        if let Some(task_with_status) =
+            Task::find_by_id_with_attempt_status(pool, task_id).await?
+        {
+            msg_store.push_patch(task_patch::replace(&task_with_status));
         }
 
         Ok(())
@@ -249,14 +244,9 @@ impl EventService {
                             match &record_type {
                                 RecordTypes::Task(task) => {
                                     // Convert Task to TaskWithAttemptStatus
-                                    if let Ok(task_list) =
-                                        Task::find_by_project_id_with_attempt_status(
-                                            &db.pool,
-                                            task.project_id,
-                                        )
-                                        .await
-                                        && let Some(task_with_status) =
-                                            task_list.into_iter().find(|t| t.id == task.id)
+                                    if let Ok(Some(task_with_status)) =
+                                        Task::find_by_id_with_attempt_status(&db.pool, task.id)
+                                            .await
                                     {
                                         let patch = match hook.operation {
                                             SqliteOperation::Insert => {
@@ -300,16 +290,12 @@ impl EventService {
                                 }
                                 RecordTypes::TaskAttempt(attempt) => {
                                     // Task attempts should update the parent task with fresh data
-                                    if let Ok(Some(task)) =
-                                        Task::find_by_id(&db.pool, attempt.task_id).await
-                                        && let Ok(task_list) =
-                                            Task::find_by_project_id_with_attempt_status(
-                                                &db.pool,
-                                                task.project_id,
-                                            )
-                                            .await
-                                        && let Some(task_with_status) =
-                                            task_list.into_iter().find(|t| t.id == attempt.task_id)
+                                    if let Ok(Some(task_with_status)) =
+                                        Task::find_by_id_with_attempt_status(
+                                            &db.pool,
+                                            attempt.task_id,
+                                        )
+                                        .await
                                     {
                                         let patch = task_patch::replace(&task_with_status);
                                         msg_store_for_hook.push_patch(patch);
@@ -321,16 +307,9 @@ impl EventService {
                                     ..
                                 } => {
                                     // Task attempt deletion should update the parent task with fresh data
-                                    if let Ok(Some(task)) =
-                                        Task::find_by_id(&db.pool, *task_id).await
-                                        && let Ok(task_list) =
-                                            Task::find_by_project_id_with_attempt_status(
-                                                &db.pool,
-                                                task.project_id,
-                                            )
+                                    if let Ok(Some(task_with_status)) =
+                                        Task::find_by_id_with_attempt_status(&db.pool, *task_id)
                                             .await
-                                        && let Some(task_with_status) =
-                                            task_list.into_iter().find(|t| t.id == *task_id)
                                     {
                                         let patch = task_patch::replace(&task_with_status);
                                         msg_store_for_hook.push_patch(patch);

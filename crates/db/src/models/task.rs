@@ -43,6 +43,7 @@ pub struct TaskWithAttemptStatus {
     pub has_merged_attempt: bool,
     pub last_attempt_failed: bool,
     pub executor: String,
+    pub attempt_count: i64,
 }
 
 impl std::ops::Deref for TaskWithAttemptStatus {
@@ -156,7 +157,9 @@ impl Task {
       WHERE ta.task_id = t.id
      ORDER BY ta.created_at DESC
       LIMIT 1
-    )                               AS "executor!: String"
+    )                               AS "executor!: String",
+
+  (SELECT COUNT(*) FROM task_attempts WHERE task_id = t.id) AS "attempt_count!: i64"
 
 FROM tasks t
 WHERE t.project_id = $1
@@ -184,10 +187,86 @@ ORDER BY t.created_at DESC"#,
                 has_merged_attempt: false, // TODO use merges table
                 last_attempt_failed: rec.last_attempt_failed != 0,
                 executor: rec.executor,
+                attempt_count: rec.attempt_count,
             })
             .collect();
 
         Ok(tasks)
+    }
+
+    pub async fn find_by_id_with_attempt_status(
+        pool: &SqlitePool,
+        task_id: Uuid,
+    ) -> Result<Option<TaskWithAttemptStatus>, sqlx::Error> {
+        let rec = sqlx::query!(
+            r#"SELECT
+  t.id                            AS "id!: Uuid",
+  t.project_id                    AS "project_id!: Uuid",
+  t.title,
+  t.description,
+  t.status                        AS "status!: TaskStatus",
+  t.parent_task_attempt           AS "parent_task_attempt: Uuid",
+  t.dev_server_id                 AS "dev_server_id: Uuid",
+  t.created_at                    AS "created_at!: DateTime<Utc>",
+  t.updated_at                    AS "updated_at!: DateTime<Utc>",
+
+  CASE WHEN EXISTS (
+    SELECT 1
+      FROM task_attempts ta
+      JOIN execution_processes ep
+        ON ep.task_attempt_id = ta.id
+     WHERE ta.task_id       = t.id
+       AND ep.status        = 'running'
+       AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+     LIMIT 1
+  ) THEN 1 ELSE 0 END            AS "has_in_progress_attempt!: i64",
+
+  CASE WHEN (
+    SELECT ep.status
+      FROM task_attempts ta
+      JOIN execution_processes ep
+        ON ep.task_attempt_id = ta.id
+     WHERE ta.task_id       = t.id
+     AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+     ORDER BY ep.created_at DESC
+     LIMIT 1
+  ) IN ('failed','killed') THEN 1 ELSE 0 END
+                                 AS "last_attempt_failed!: i64",
+
+  ( SELECT ta.executor
+      FROM task_attempts ta
+      WHERE ta.task_id = t.id
+     ORDER BY ta.created_at DESC
+      LIMIT 1
+    )                            AS "executor!: String",
+
+  (SELECT COUNT(*) FROM task_attempts WHERE task_id = t.id) AS "attempt_count!: i64"
+
+FROM tasks t
+WHERE t.id = $1"#,
+            task_id
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(rec.map(|rec| TaskWithAttemptStatus {
+            task: Task {
+                id: rec.id,
+                project_id: rec.project_id,
+                title: rec.title,
+                description: rec.description,
+                status: rec.status,
+                parent_task_attempt: rec.parent_task_attempt,
+                dev_server_id: rec.dev_server_id,
+                created_at: rec.created_at,
+                updated_at: rec.updated_at,
+            },
+            has_in_progress_attempt: rec.has_in_progress_attempt != 0,
+            has_merged_attempt: false,
+            last_attempt_failed: rec.last_attempt_failed != 0,
+            executor: rec.executor,
+            attempt_count: rec.attempt_count,
+        }))
     }
 
     pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
