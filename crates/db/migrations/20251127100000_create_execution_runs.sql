@@ -1,3 +1,19 @@
+-- ============================================================================
+-- WARNING: MIGRATION LOCK TIME
+-- ============================================================================
+-- This migration disables foreign keys and recreates the execution_processes
+-- table. SQLite will acquire an exclusive write lock for the duration.
+--
+-- Expected lock time: ~50ms per 10,000 rows + ~200ms overhead
+-- Examples:
+--   - 10k rows:  ~250ms
+--   - 100k rows: ~700ms
+--   - 1M rows:   ~5.2 seconds
+--
+-- RECOMMENDATION: For databases with >100k execution_processes rows,
+-- run this migration during a maintenance window.
+-- ============================================================================
+
 -- Execution Runs: Lightweight executor invocation without Task overhead
 -- Used for serverless micro-tasks like generating commit messages, PR descriptions, etc.
 -- Reuses 100% of existing executor infrastructure - same profiles, same streaming, same everything.
