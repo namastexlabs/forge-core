@@ -1,14 +1,15 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    middleware::from_fn_with_state,
     response::Json as ResponseJson,
     routing::{get, post},
     Extension, Json, Router,
 };
 use db::models::project::Project;
+use deployment::Deployment;
 use serde::{Deserialize, Serialize};
 use services::services::git_remote::{
-    BranchSyncStatus, FetchResult, GitRemoteService, PullResult, PullStrategy,
+    BranchSyncStatus, GitRemoteService, PullResult, PullStrategy,
 };
 use ts_rs::TS;
 use utils::response::ApiResponse;
@@ -29,7 +30,7 @@ pub async fn fetch_project(
     // Get GitHub token
     let github_token = {
         let config = deployment.config().read().await;
-        config.github.token.clone()
+        config.github.token().clone()
     };
 
     if github_token.is_none() {
@@ -110,7 +111,7 @@ pub async fn get_sync_status(
 
     Ok(ResponseJson(ApiResponse::success(
         ProjectSyncStatusResponse {
-            project_id,
+            project_id: project_id.to_string(),
             current_branch: status.current_branch,
             branches: status.branches,
             response_time_ms: duration_ms as u64,
@@ -137,7 +138,7 @@ pub async fn pull_branch(
     // Get GitHub token
     let github_token = {
         let config = deployment.config().read().await;
-        config.github.token.clone()
+        config.github.token().clone()
     };
 
     if github_token.is_none() {
@@ -164,8 +165,7 @@ pub async fn pull_branch(
     })?
     .map_err(|e| {
         tracing::error!("Pull failed: {}", e);
-        // Return error as JSON response instead of HTTP error
-        return ApiError::from(e);
+        ApiError::from(e)
     })?;
 
     Ok(ResponseJson(ApiResponse::success(result)))
@@ -193,27 +193,13 @@ pub struct ProjectSyncStatusResponse {
 
 // Router
 
-pub fn git_remote_routes() -> Router<DeploymentImpl> {
+pub fn git_remote_routes(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     Router::new()
-        .route(
-            "/projects/:id/fetch",
-            post(fetch_project).route_layer(from_fn_with_state(
-                (),
-                load_project_middleware::<DeploymentImpl>,
-            )),
-        )
-        .route(
-            "/projects/:id/sync-status",
-            get(get_sync_status).route_layer(from_fn_with_state(
-                (),
-                load_project_middleware::<DeploymentImpl>,
-            )),
-        )
-        .route(
-            "/projects/:id/branches/:branch_name/pull",
-            post(pull_branch).route_layer(from_fn_with_state(
-                (),
-                load_project_middleware::<DeploymentImpl>,
-            )),
-        )
+        .route("/projects/:id/fetch", post(fetch_project))
+        .route("/projects/:id/sync-status", get(get_sync_status))
+        .route("/projects/:id/branches/:branch_name/pull", post(pull_branch))
+        .layer(from_fn_with_state(
+            deployment.clone(),
+            load_project_middleware,
+        ))
 }

@@ -39,7 +39,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(filesystem::router())
         .merge(events::router(&deployment))
         .merge(approvals::router())
-        .merge(git_remote::git_remote_routes())
+        .merge(git_remote::git_remote_routes(&deployment))
         .nest("/images", images::routes())
         .layer(from_fn_with_state(
             deployment.clone(),
