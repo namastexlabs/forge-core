@@ -192,7 +192,7 @@ impl EventService {
                                             serde_json::from_value::<ExecutionProcess>(
                                                 op.value.clone(),
                                             )
-                                            && process.task_attempt_id == task_attempt_id
+                                            && process.task_attempt_id == Some(task_attempt_id)
                                         {
                                             if !show_soft_deleted && process.dropped {
                                                 let remove_patch =
@@ -208,7 +208,7 @@ impl EventService {
                                             serde_json::from_value::<ExecutionProcess>(
                                                 op.value.clone(),
                                             )
-                                            && process.task_attempt_id == task_attempt_id
+                                            && process.task_attempt_id == Some(task_attempt_id)
                                         {
                                             if !show_soft_deleted && process.dropped {
                                                 let remove_patch =
@@ -233,7 +233,7 @@ impl EventService {
                             {
                                 match &event_patch.value.record {
                                     RecordTypes::ExecutionProcess(process) => {
-                                        if process.task_attempt_id == task_attempt_id {
+                                        if process.task_attempt_id == Some(task_attempt_id) {
                                             if !show_soft_deleted && process.dropped {
                                                 let remove_patch =
                                                     execution_process_patch::remove(process.id);

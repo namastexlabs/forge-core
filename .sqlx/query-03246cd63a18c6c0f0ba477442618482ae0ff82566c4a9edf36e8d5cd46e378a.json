@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT ep.id as \"id!: Uuid\", ep.task_attempt_id as \"task_attempt_id!: Uuid\", ep.execution_run_id as \"execution_run_id: Uuid\", ep.run_reason as \"run_reason!: ExecutionProcessRunReason\", ep.executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\",\n                      ep.before_head_commit, ep.after_head_commit, ep.status as \"status!: ExecutionProcessStatus\", ep.exit_code,\n                      ep.dropped, ep.started_at as \"started_at!: DateTime<Utc>\", ep.completed_at as \"completed_at?: DateTime<Utc>\", ep.created_at as \"created_at!: DateTime<Utc>\", ep.updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM execution_processes ep\n               JOIN task_attempts ta ON ep.task_attempt_id = ta.id\n               JOIN tasks t ON ta.task_id = t.id\n               WHERE ep.status = 'running' AND ep.run_reason = 'devserver' AND t.project_id = ?\n               ORDER BY ep.created_at ASC",
+  "query": "SELECT ep.id as \"id!: Uuid\", ep.task_attempt_id as \"task_attempt_id: Uuid\", ep.execution_run_id as \"execution_run_id: Uuid\", ep.run_reason as \"run_reason!: ExecutionProcessRunReason\", ep.executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\",\n                      ep.before_head_commit, ep.after_head_commit, ep.status as \"status!: ExecutionProcessStatus\", ep.exit_code,\n                      ep.dropped, ep.started_at as \"started_at!: DateTime<Utc>\", ep.completed_at as \"completed_at?: DateTime<Utc>\", ep.created_at as \"created_at!: DateTime<Utc>\", ep.updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM execution_processes ep\n               JOIN task_attempts ta ON ep.task_attempt_id = ta.id\n               JOIN tasks t ON ta.task_id = t.id\n               WHERE ep.status = 'running' AND ep.run_reason = 'devserver' AND t.project_id = ?\n               ORDER BY ep.created_at ASC",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Blob"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_attempt_id: Uuid",
         "ordinal": 1,
         "type_info": "Blob"
       },
@@ -79,7 +79,7 @@
     },
     "nullable": [
       true,
-      false,
+      true,
       true,
       false,
       false,
@@ -94,5 +94,5 @@
       false
     ]
   },
-  "hash": "8dc175a94bc39cb81aae60dba1fb08f95242d63a59f79e476ff5d4cacb780131"
+  "hash": "03246cd63a18c6c0f0ba477442618482ae0ff82566c4a9edf36e8d5cd46e378a"
 }

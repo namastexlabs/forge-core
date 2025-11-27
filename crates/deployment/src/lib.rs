@@ -144,7 +144,7 @@ pub trait Deployment: Clone + Send + Sync + 'static {
         let running_processes = ExecutionProcess::find_running(&self.db().pool).await?;
         for process in running_processes {
             tracing::info!(
-                "Found orphaned execution process {} for task attempt {}",
+                "Found orphaned execution process {} for task attempt {:?}",
                 process.id,
                 process.task_attempt_id
             );
@@ -164,9 +164,10 @@ pub trait Deployment: Clone + Send + Sync + 'static {
                 );
                 continue;
             }
-            // Capture after-head commit OID (best-effort)
-            if let Ok(Some(task_attempt)) =
-                TaskAttempt::find_by_id(&self.db().pool, process.task_attempt_id).await
+            // Capture after-head commit OID (best-effort) - only for task-attempt-based processes
+            if let Some(attempt_id) = process.task_attempt_id
+                && let Ok(Some(task_attempt)) =
+                    TaskAttempt::find_by_id(&self.db().pool, attempt_id).await
                 && let Some(container_ref) = task_attempt.container_ref
             {
                 let wt = std::path::PathBuf::from(container_ref);
@@ -187,8 +188,9 @@ pub trait Deployment: Clone + Send + Sync + 'static {
                 ExecutionProcessRunReason::CodingAgent
                     | ExecutionProcessRunReason::SetupScript
                     | ExecutionProcessRunReason::CleanupScript
-            ) && let Ok(Some(task_attempt)) =
-                TaskAttempt::find_by_id(&self.db().pool, process.task_attempt_id).await
+            ) && let Some(attempt_id) = process.task_attempt_id
+                && let Ok(Some(task_attempt)) =
+                    TaskAttempt::find_by_id(&self.db().pool, attempt_id).await
                 && let Ok(Some(task)) = task_attempt.parent_task(&self.db().pool).await
                 && let Err(e) =
                     Task::update_status(&self.db().pool, task.id, TaskStatus::InReview).await
@@ -226,7 +228,7 @@ pub trait Deployment: Clone + Send + Sync + 'static {
                     Ok(oid) => before = Some(oid),
                     Err(e) => {
                         tracing::warn!(
-                            "Backfill: Failed to resolve base branch OID for attempt {} (branch {}): {}",
+                            "Backfill: Failed to resolve base branch OID for attempt {:?} (branch {}): {}",
                             row.task_attempt_id,
                             row.target_branch,
                             e

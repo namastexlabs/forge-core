@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO execution_processes (\n                    id, task_attempt_id, execution_run_id, run_reason, executor_action, before_head_commit,\n                    after_head_commit, status, exit_code, started_at, completed_at, created_at, updated_at\n                ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?) RETURNING\n                    id as \"id!: Uuid\", task_attempt_id as \"task_attempt_id!: Uuid\", execution_run_id as \"execution_run_id: Uuid\", run_reason as \"run_reason!: ExecutionProcessRunReason\", executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\", before_head_commit,\n                    after_head_commit, status as \"status!: ExecutionProcessStatus\", exit_code, dropped, started_at as \"started_at!: DateTime<Utc>\", completed_at as \"completed_at?: DateTime<Utc>\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "INSERT INTO execution_processes (\n                    id, task_attempt_id, execution_run_id, run_reason, executor_action, before_head_commit,\n                    after_head_commit, status, exit_code, started_at, completed_at, created_at, updated_at\n                ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?) RETURNING\n                    id as \"id!: Uuid\", task_attempt_id as \"task_attempt_id: Uuid\", execution_run_id as \"execution_run_id: Uuid\", run_reason as \"run_reason!: ExecutionProcessRunReason\", executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\", before_head_commit,\n                    after_head_commit, status as \"status!: ExecutionProcessStatus\", exit_code, dropped, started_at as \"started_at!: DateTime<Utc>\", completed_at as \"completed_at?: DateTime<Utc>\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Blob"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_attempt_id: Uuid",
         "ordinal": 1,
         "type_info": "Blob"
       },
@@ -79,7 +79,7 @@
     },
     "nullable": [
       true,
-      false,
+      true,
       true,
       false,
       false,
@@ -94,5 +94,5 @@
       false
     ]
   },
-  "hash": "99585b8d04d832f462f236fd0d3e52b202e4ed7b16cee956f48964801dd062a8"
+  "hash": "be73f2bbfd763ea544c2c790f7b818bba6b2d8d90c0cd0b597a42ce6a7ce9b0f"
 }

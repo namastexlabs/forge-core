@@ -303,7 +303,7 @@ pub async fn follow_up(
                 .ok_or(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                     "Process not found".to_string(),
                 )))?;
-        if process.task_attempt_id != task_attempt.id {
+        if process.task_attempt_id != Some(task_attempt.id) {
             return Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                 "Process does not belong to this attempt".to_string(),
             )));
@@ -424,7 +424,7 @@ pub async fn replace_process(
             .ok_or(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                 "Process not found".to_string(),
             )))?;
-    if process.task_attempt_id != task_attempt.id {
+    if process.task_attempt_id != Some(task_attempt.id) {
         return Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
             "Process does not belong to this attempt".to_string(),
         )));

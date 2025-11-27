@@ -356,12 +356,12 @@ pub trait ContainerService {
             let task_attempt = match process.parent_task_attempt(&self.db().pool).await {
                 Ok(Some(task_attempt)) => task_attempt,
                 Ok(None) => {
-                    tracing::error!("No task attempt found for ID: {}", process.task_attempt_id);
+                    tracing::error!("No task attempt found for ID: {:?}", process.task_attempt_id);
                     return None;
                 }
                 Err(e) => {
                     tracing::error!(
-                        "Failed to fetch task attempt {}: {}",
+                        "Failed to fetch task attempt {:?}: {}",
                         process.task_attempt_id,
                         e
                     );
@@ -601,7 +601,7 @@ pub trait ContainerService {
             }
         };
         let create_execution_process = CreateExecutionProcess {
-            task_attempt_id: task_attempt.id,
+            task_attempt_id: Some(task_attempt.id),
             execution_run_id: None,
             executor_action: executor_action.clone(),
             run_reason: run_reason.clone(),
@@ -889,7 +889,7 @@ pub trait ContainerService {
 
         // Create execution process record - note: task_attempt_id is None, execution_run_id is set
         let create_execution_process = CreateExecutionProcess {
-            task_attempt_id: Uuid::nil(), // Not associated with a task attempt
+            task_attempt_id: None, // Not associated with a task attempt (ExecutionRun-based)
             execution_run_id: Some(execution_run.id),
             executor_action: executor_action.clone(),
             run_reason: run_reason.clone(),
