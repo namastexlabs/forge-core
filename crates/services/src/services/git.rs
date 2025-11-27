@@ -2015,3 +2015,31 @@ impl GitService {
 //         assert_eq!(branch_name, "main");
 //     }
 // }
+
+    /// Get the current branch name
+    pub fn get_current_branch_name(&self, repo_path: &Path) -> Result<String, GitServiceError> {
+        let repo = self.open_repo(repo_path)?;
+        let head = repo.head()?;
+        head.shorthand()
+            .map(|s| s.to_string())
+            .ok_or_else(|| GitServiceError::InvalidRepository("Detached HEAD".into()))
+    }
+
+    /// Get list of all local branches that have an upstream configured
+    pub fn get_tracked_branches(&self, repo_path: &Path) -> Result<Vec<String>, GitServiceError> {
+        let repo = self.open_repo(repo_path)?;
+        let mut branches = Vec::new();
+
+        for branch_result in repo.branches(Some(BranchType::Local))? {
+            let (branch, _) = branch_result?;
+
+            // Only include branches with upstream
+            if branch.upstream().is_ok() {
+                if let Some(name) = branch.name()? {
+                    branches.push(name.to_string());
+                }
+            }
+        }
+
+        Ok(branches)
+    }

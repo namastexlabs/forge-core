@@ -12,6 +12,7 @@ pub mod filesystem;
 pub mod filesystem_watcher;
 pub mod git;
 pub mod git_cli;
+pub mod git_remote;
 pub mod github_service;
 pub mod image;
 pub mod notification;
