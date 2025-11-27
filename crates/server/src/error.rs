@@ -5,7 +5,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use db::models::{
-    execution_process::ExecutionProcessError, project::ProjectError, task_attempt::TaskAttemptError,
+    execution_process::ExecutionProcessError, execution_run::ExecutionRunError,
+    project::ProjectError, task_attempt::TaskAttemptError,
 };
 use deployment::DeploymentError;
 use executors::executors::ExecutorError;
@@ -27,6 +28,8 @@ pub enum ApiError {
     TaskAttempt(#[from] TaskAttemptError),
     #[error(transparent)]
     ExecutionProcess(#[from] ExecutionProcessError),
+    #[error(transparent)]
+    ExecutionRun(#[from] ExecutionRunError),
     #[error(transparent)]
     GitService(#[from] GitServiceError),
     #[error(transparent)]
@@ -73,6 +76,13 @@ impl IntoResponse for ApiError {
                     (StatusCode::NOT_FOUND, "ExecutionProcessError")
                 }
                 _ => (StatusCode::INTERNAL_SERVER_ERROR, "ExecutionProcessError"),
+            },
+            ApiError::ExecutionRun(err) => match err {
+                ExecutionRunError::ExecutionRunNotFound => {
+                    (StatusCode::NOT_FOUND, "ExecutionRunError")
+                }
+                ExecutionRunError::ProjectNotFound => (StatusCode::NOT_FOUND, "ProjectNotFound"),
+                _ => (StatusCode::INTERNAL_SERVER_ERROR, "ExecutionRunError"),
             },
             // Promote certain GitService errors to conflict status with concise messages
             ApiError::GitService(git_err) => match git_err {

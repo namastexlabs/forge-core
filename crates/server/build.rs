@@ -1,5 +1,3 @@
-use std::{fs, path::Path};
-
 fn main() {
     dotenv::dotenv().ok();
 

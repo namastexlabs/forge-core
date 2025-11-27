@@ -15,6 +15,7 @@ pub mod filesystem;
 pub mod drafts;
 pub mod events;
 pub mod execution_processes;
+pub mod execution_runs;
 pub mod health;
 pub mod images;
 pub mod projects;
@@ -33,6 +34,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(tasks::router(&deployment))
         .merge(task_attempts::router(&deployment))
         .merge(execution_processes::router(&deployment))
+        .merge(execution_runs::router(&deployment))
         .merge(tags::router(&deployment))
         .merge(auth::router(&deployment))
         .merge(filesystem::router())

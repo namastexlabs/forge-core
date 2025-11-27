@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE executor_sessions\n               SET summary = $1, updated_at = $2\n               WHERE execution_process_id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "74b10a43e24f14b32be59b82fcdaef6a73c86510324554d086819d6bd6ed30ab"
+}

@@ -687,12 +687,12 @@ pub async fn merge_task_attempt(
         });
 
     // Generate high-quality commit message
-    let commit_message_generator = CommitMessageGenerator::new(deployment.git());
+    let commit_message_generator = CommitMessageGenerator::new();
     let commit_message = commit_message_generator
         .generate(
             &ctx.task.title,
             ctx.task.description.as_deref(),
-            ctx.task.github_issue_number,
+            None, // TODO: github_issue_number not yet on Task model
             executor_commit_message.as_deref(),
             worktree_path,
         )

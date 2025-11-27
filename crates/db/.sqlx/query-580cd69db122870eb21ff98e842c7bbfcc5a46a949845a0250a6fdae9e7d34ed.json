@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE executor_sessions\n               SET commit_message = $1, updated_at = $2\n               WHERE execution_process_id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "580cd69db122870eb21ff98e842c7bbfcc5a46a949845a0250a6fdae9e7d34ed"
+}

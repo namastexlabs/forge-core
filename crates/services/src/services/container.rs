@@ -14,6 +14,7 @@ use db::{
             ExecutionProcessStatus,
         },
         execution_process_logs::ExecutionProcessLogs,
+        execution_run::ExecutionRun,
         executor_session::{CreateExecutorSession, ExecutorSession},
         task::{Task, TaskStatus},
         task_attempt::{TaskAttempt, TaskAttemptError},
@@ -601,6 +602,7 @@ pub trait ContainerService {
         };
         let create_execution_process = CreateExecutionProcess {
             task_attempt_id: task_attempt.id,
+            execution_run_id: None,
             executor_action: executor_action.clone(),
             run_reason: run_reason.clone(),
         };
@@ -814,5 +816,205 @@ pub trait ContainerService {
             )
             .await?;
         Ok(())
+    }
+
+    // =========================================================================
+    // ExecutionRun methods - lightweight executor invocation without Task
+    // =========================================================================
+
+    /// Get the current directory for an execution run (worktree path)
+    fn execution_run_to_current_dir(&self, execution_run: &ExecutionRun) -> PathBuf {
+        PathBuf::from(execution_run.container_ref.clone().unwrap_or_default())
+    }
+
+    /// Create a worktree for an execution run
+    async fn create_for_run(&self, execution_run: &ExecutionRun) -> Result<ContainerRef, ContainerError>;
+
+    /// Start an execution run - lightweight executor invocation without Task
+    async fn start_run(
+        &self,
+        execution_run: &ExecutionRun,
+        executor_profile_id: ExecutorProfileId,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        // Create worktree
+        self.create_for_run(execution_run).await?;
+
+        // Get latest version of execution run with container_ref
+        let execution_run = ExecutionRun::find_by_id(&self.db().pool, execution_run.id)
+            .await?
+            .ok_or(SqlxError::RowNotFound)?;
+
+        let worktree_path = PathBuf::from(
+            execution_run
+                .container_ref
+                .as_ref()
+                .ok_or_else(|| ContainerError::Other(anyhow!("Container ref not found")))?,
+        );
+
+        let prompt = ImageService::canonicalise_image_paths(&execution_run.prompt, &worktree_path);
+
+        // Build CodingAgentInitialRequest - same as TaskAttempt but without cleanup script
+        let executor_action = ExecutorAction::new(
+            ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+                prompt,
+                executor_profile_id: executor_profile_id.clone(),
+            }),
+            None, // No cleanup action for runs
+        );
+
+        self.start_execution_for_run(
+            &execution_run,
+            &executor_action,
+            &ExecutionProcessRunReason::CodingAgent,
+        )
+        .await
+    }
+
+    /// Start execution for an execution run (reuses executor spawning logic)
+    async fn start_execution_for_run(
+        &self,
+        execution_run: &ExecutionRun,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        // Capture current HEAD as the "before" commit for this execution
+        let before_head_commit = {
+            if let Some(container_ref) = &execution_run.container_ref {
+                let wt = std::path::Path::new(container_ref);
+                self.git().get_head_info(wt).ok().map(|h| h.oid)
+            } else {
+                None
+            }
+        };
+
+        // Create execution process record - note: task_attempt_id is None, execution_run_id is set
+        let create_execution_process = CreateExecutionProcess {
+            task_attempt_id: Uuid::nil(), // Not associated with a task attempt
+            execution_run_id: Some(execution_run.id),
+            executor_action: executor_action.clone(),
+            run_reason: run_reason.clone(),
+        };
+
+        let execution_process = ExecutionProcess::create(
+            &self.db().pool,
+            &create_execution_process,
+            Uuid::new_v4(),
+            before_head_commit.as_deref(),
+        )
+        .await?;
+
+        // Create executor session for coding agent requests
+        if let Some(prompt) = match executor_action.typ() {
+            ExecutorActionType::CodingAgentInitialRequest(coding_agent_request) => {
+                Some(coding_agent_request.prompt.clone())
+            }
+            ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request) => {
+                Some(follow_up_request.prompt.clone())
+            }
+            _ => None,
+        } {
+            let create_executor_data = CreateExecutorSession {
+                task_attempt_id: Uuid::nil(), // Not associated with a task attempt
+                execution_process_id: execution_process.id,
+                prompt: Some(prompt),
+            };
+
+            let executor_session_record_id = Uuid::new_v4();
+
+            ExecutorSession::create(
+                &self.db().pool,
+                &create_executor_data,
+                executor_session_record_id,
+            )
+            .await?;
+        }
+
+        // Start execution using inner implementation (needs to be implemented by concrete type)
+        if let Err(start_error) = self
+            .start_execution_inner_for_run(execution_run, &execution_process, executor_action)
+            .await
+        {
+            // Mark process as failed
+            if let Err(update_error) = ExecutionProcess::update_completion(
+                &self.db().pool,
+                execution_process.id,
+                ExecutionProcessStatus::Failed,
+                None,
+            )
+            .await
+            {
+                tracing::error!(
+                    "Failed to mark execution process {} as failed after start error: {}",
+                    execution_process.id,
+                    update_error
+                );
+            }
+
+            // Emit stderr error message
+            let log_message = LogMsg::Stderr(format!("Failed to start execution: {start_error}"));
+            if let Ok(json_line) = serde_json::to_string(&log_message) {
+                let _ = ExecutionProcessLogs::append_log_line(
+                    &self.db().pool,
+                    execution_process.id,
+                    &format!("{json_line}\n"),
+                )
+                .await;
+            }
+
+            return Err(start_error);
+        }
+
+        // Start processing normalized logs for executor requests
+        if let Some(msg_store) = self.get_msg_store_by_id(&execution_process.id).await
+            && let Some(executor_profile_id) = match executor_action.typ() {
+                ExecutorActionType::CodingAgentInitialRequest(request) => {
+                    Some(&request.executor_profile_id)
+                }
+                ExecutorActionType::CodingAgentFollowUpRequest(request) => {
+                    Some(&request.executor_profile_id)
+                }
+                _ => None,
+            }
+        {
+            if let Some(executor) =
+                ExecutorConfigs::get_cached().get_coding_agent(executor_profile_id)
+            {
+                executor.normalize_logs(msg_store, &self.execution_run_to_current_dir(execution_run));
+            } else {
+                tracing::error!(
+                    "Failed to resolve profile '{:?}' for normalization",
+                    executor_profile_id
+                );
+            }
+        }
+
+        self.spawn_stream_raw_logs_to_db(&execution_process.id);
+        Ok(execution_process)
+    }
+
+    /// Inner start execution for runs - must be implemented by concrete type
+    async fn start_execution_inner_for_run(
+        &self,
+        execution_run: &ExecutionRun,
+        execution_process: &ExecutionProcess,
+        executor_action: &ExecutorAction,
+    ) -> Result<(), ContainerError>;
+
+    /// Stream raw logs for an execution run
+    async fn stream_raw_logs_for_run(
+        &self,
+        execution_run_id: &Uuid,
+    ) -> Option<futures::stream::BoxStream<'static, Result<LogMsg, std::io::Error>>> {
+        // Find the latest execution process for this run
+        let process = ExecutionProcess::find_latest_by_execution_run_and_run_reason(
+            &self.db().pool,
+            *execution_run_id,
+            &ExecutionProcessRunReason::CodingAgent,
+        )
+        .await
+        .ok()
+        .flatten()?;
+
+        self.stream_raw_logs(&process.id).await
     }
 }

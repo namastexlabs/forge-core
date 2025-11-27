@@ -2,8 +2,6 @@ use std::path::Path;
 
 use thiserror::Error;
 
-use crate::services::git::GitService;
-
 #[derive(Error, Debug)]
 pub enum CommitMessageError {
     #[error("Git service error: {0}")]
@@ -14,13 +12,11 @@ pub enum CommitMessageError {
 }
 
 /// Service for generating high-quality conventional commit messages
-pub struct CommitMessageGenerator<'a> {
-    git_service: &'a GitService,
-}
+pub struct CommitMessageGenerator;
 
-impl<'a> CommitMessageGenerator<'a> {
-    pub fn new(git_service: &'a GitService) -> Self {
-        Self { git_service }
+impl CommitMessageGenerator {
+    pub fn new() -> Self {
+        Self
     }
 
     /// Generate a commit message from task context
