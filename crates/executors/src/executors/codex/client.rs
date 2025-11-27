@@ -211,6 +211,24 @@ impl AppServerClient {
                 }
                 Ok(())
             }
+            // v0.63.0 v2 API approval requests - handle with auto-approve for now
+            ServerRequest::CommandExecutionRequestApproval { request_id, .. } => {
+                tracing::debug!("v2 CommandExecutionRequestApproval - auto-approving");
+                let response = codex_app_server_protocol::CommandExecutionRequestApprovalResponse {
+                    decision: codex_app_server_protocol::ApprovalDecision::Accept,
+                    accept_settings: None,
+                };
+                send_server_response(peer, request_id, response).await?;
+                Ok(())
+            }
+            ServerRequest::FileChangeRequestApproval { request_id, .. } => {
+                tracing::debug!("v2 FileChangeRequestApproval - auto-approving");
+                let response = codex_app_server_protocol::FileChangeRequestApprovalResponse {
+                    decision: codex_app_server_protocol::ApprovalDecision::Accept,
+                };
+                send_server_response(peer, request_id, response).await?;
+                Ok(())
+            }
         }
     }
 

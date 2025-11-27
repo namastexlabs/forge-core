@@ -491,7 +491,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                     upsert_normalized_entry(&msg_store, index, entry, is_new);
                     state.thinking = None;
                 }
-                EventMsg::AgentReasoningSectionBreak(AgentReasoningSectionBreakEvent {}) => {
+                EventMsg::AgentReasoningSectionBreak(AgentReasoningSectionBreakEvent { .. }) => {
                     state.assistant = None;
                     state.thinking = None;
                 }
@@ -502,6 +502,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                     reason,
                     risk: _,
                     parsed_cmd: _,
+                    ..
                 }) => {
                     state.assistant = None;
                     state.thinking = None;
@@ -540,6 +541,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                     changes,
                     reason: _,
                     grant_root: _,
+                    ..
                 }) => {
                     state.assistant = None;
                     state.thinking = None;
@@ -635,6 +637,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                     exit_code,
                     duration: _,
                     formatted_output,
+                    ..
                 }) => {
                     if let Some(mut command_state) = state.commands.remove(&call_id) {
                         command_state.formatted_output = Some(formatted_output);
@@ -668,7 +671,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                         },
                     );
                 }
-                EventMsg::StreamError(StreamErrorEvent { message }) => {
+                EventMsg::StreamError(StreamErrorEvent { message, .. }) => {
                     add_normalized_entry(
                         &msg_store,
                         &entry_index,
@@ -951,7 +954,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                         },
                     );
                 }
-                EventMsg::Error(ErrorEvent { message }) => {
+                EventMsg::Error(ErrorEvent { message, .. }) => {
                     add_normalized_entry(
                         &msg_store,
                         &entry_index,
@@ -992,7 +995,10 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                 | EventMsg::AgentMessageContentDelta(..)
                 | EventMsg::UndoCompleted(..)
                 | EventMsg::ReasoningContentDelta(..)
-                | EventMsg::ReasoningRawContentDelta(..) => {}
+                | EventMsg::ReasoningRawContentDelta(..)
+                // v0.63.0 new variants
+                | EventMsg::McpStartupUpdate(..)
+                | EventMsg::McpStartupComplete(..) => {}
             }
         }
     });
