@@ -13,8 +13,17 @@ use super::git_cli::GitCli;
 pub enum GitRemoteError {
     #[error(transparent)]
     GitService(#[from] GitServiceError),
+    #[error(transparent)]
+    GitCli(#[from] super::git_cli::GitCliError),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+// Convert git2::Error to GitRemoteError through GitServiceError
+impl From<git2::Error> for GitRemoteError {
+    fn from(err: git2::Error) -> Self {
+        GitRemoteError::GitService(GitServiceError::from(err))
+    }
 }
 
 pub struct GitRemoteService {
@@ -218,10 +227,10 @@ impl GitRemoteService {
 
         match strategy {
             PullStrategy::Merge | PullStrategy::FastForward => {
-                git_cli.run_command(repo_path, &["merge", "--ff-only", "HEAD@{u}"])?;
+                git_cli.git(repo_path, &["merge", "--ff-only", "HEAD@{u}"])?;
             }
             PullStrategy::Rebase => {
-                git_cli.run_command(repo_path, &["rebase", "HEAD@{u}"])?;
+                git_cli.git(repo_path, &["rebase", "HEAD@{u}"])?;
             }
         }
 

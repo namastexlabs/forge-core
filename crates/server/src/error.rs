@@ -12,8 +12,8 @@ use executors::executors::ExecutorError;
 use git2::Error as Git2Error;
 use services::services::{
     auth::AuthError, config::ConfigError, container::ContainerError, drafts::DraftsServiceError,
-    git::GitServiceError, github_service::GitHubServiceError, image::ImageError,
-    worktree_manager::WorktreeError,
+    git::GitServiceError, git_remote::GitRemoteError, github_service::GitHubServiceError,
+    image::ImageError, worktree_manager::WorktreeError,
 };
 use thiserror::Error;
 use utils::response::ApiResponse;
@@ -29,6 +29,8 @@ pub enum ApiError {
     ExecutionProcess(#[from] ExecutionProcessError),
     #[error(transparent)]
     GitService(#[from] GitServiceError),
+    #[error(transparent)]
+    GitRemote(#[from] GitRemoteError),
     #[error(transparent)]
     GitHubService(#[from] GitHubServiceError),
     #[error(transparent)]
@@ -55,6 +57,8 @@ pub enum ApiError {
     Io(#[from] std::io::Error),
     #[error("Conflict: {0}")]
     Conflict(String),
+    #[error("Internal server error")]
+    InternalServerError,
 }
 
 impl From<Git2Error> for ApiError {
@@ -84,6 +88,7 @@ impl IntoResponse for ApiError {
                 }
                 _ => (StatusCode::INTERNAL_SERVER_ERROR, "GitServiceError"),
             },
+            ApiError::GitRemote(_) => (StatusCode::INTERNAL_SERVER_ERROR, "GitRemoteError"),
             ApiError::GitHubService(_) => (StatusCode::INTERNAL_SERVER_ERROR, "GitHubServiceError"),
             ApiError::Auth(_) => (StatusCode::INTERNAL_SERVER_ERROR, "AuthError"),
             ApiError::Deployment(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DeploymentError"),
@@ -114,6 +119,7 @@ impl IntoResponse for ApiError {
             ApiError::Io(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IoError"),
             ApiError::Multipart(_) => (StatusCode::BAD_REQUEST, "MultipartError"),
             ApiError::Conflict(_) => (StatusCode::CONFLICT, "ConflictError"),
+            ApiError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "InternalServerError"),
         };
 
         let error_message = match &self {
