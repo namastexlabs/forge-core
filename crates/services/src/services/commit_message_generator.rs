@@ -118,11 +118,8 @@ impl<'a> CommitMessageGenerator<'a> {
         cleaned = cleaned.lines().next().unwrap_or(cleaned);
 
         // Truncate to reasonable length (72 chars for subject line)
-        let cleaned = if cleaned.len() > 72 {
-            &cleaned[..72]
-        } else {
-            cleaned
-        };
+        // Use chars() to avoid UTF-8 boundary panic on multi-byte characters
+        let cleaned: String = cleaned.chars().take(72).collect();
 
         // Remove trailing ellipsis or incomplete sentences
         let cleaned = cleaned.trim_end_matches("…").trim_end_matches("...");
@@ -142,9 +139,8 @@ impl<'a> CommitMessageGenerator<'a> {
                     // Skip section headers with excessive formatting
                     && !trimmed.starts_with("## ")
                     && !trimmed.starts_with("### ")
-                    // Skip empty lines at start
-                    && !(trimmed.is_empty() && lines.is_empty())
             })
+            .skip_while(|line| line.trim().is_empty()) // Skip leading empty lines
             .take(10) // Max 10 lines
             .collect();
 
@@ -221,7 +217,27 @@ mod tests {
     fn test_sanitize_title_truncates_long_lines() {
         let long_title = "a".repeat(100);
         let result = CommitMessageGenerator::sanitize_title(&long_title);
-        assert_eq!(result.len(), 72);
+        // 72 chars, not 72 bytes
+        assert_eq!(result.chars().count(), 72);
+    }
+
+    #[test]
+    fn test_sanitize_title_handles_emoji_truncation() {
+        // Emoji are 4 bytes each, this tests UTF-8 safe truncation
+        let title_with_emoji = format!("{}🚀🎉✨", "a".repeat(70));
+        let result = CommitMessageGenerator::sanitize_title(&title_with_emoji);
+        // Should truncate to 72 chars without panicking
+        assert_eq!(result.chars().count(), 72);
+        assert!(result.ends_with("🚀🎉")); // 70 a's + 2 emoji = 72 chars
+    }
+
+    #[test]
+    fn test_sanitize_title_handles_cjk_characters() {
+        // CJK characters are 3 bytes each
+        let cjk_title = "这是一个很长的中文标题需要被截断到七十二个字符以内测试多字节字符处理";
+        let result = CommitMessageGenerator::sanitize_title(cjk_title);
+        // Should not panic and should truncate by char count
+        assert!(result.chars().count() <= 72);
     }
 
     #[test]
