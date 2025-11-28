@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id!: Uuid\",\n                execution_process_id as \"execution_process_id!: Uuid\",\n                session_id,\n                prompt,\n                summary,\n                commit_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM executor_sessions\n               WHERE task_attempt_id = $1\n               ORDER BY created_at ASC",
+  "query": "INSERT INTO executor_sessions (\n                id, task_attempt_id, execution_process_id, session_id, prompt, summary, commit_message,\n                created_at, updated_at\n               )\n               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n               RETURNING\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id: Uuid\",\n                execution_process_id as \"execution_process_id!: Uuid\",\n                session_id,\n                prompt,\n                summary,\n                commit_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Blob"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_attempt_id: Uuid",
         "ordinal": 1,
         "type_info": "Blob"
       },
@@ -50,11 +50,11 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 9
     },
     "nullable": [
       true,
-      false,
+      true,
       false,
       true,
       true,
@@ -64,5 +64,5 @@
       false
     ]
   },
-  "hash": "47f30a130353754feb44cfbbb02e37522d9eda55d417632c0d3d82ddef0d1c73"
+  "hash": "00511023219093b49ef66b8249313d2e8bbdc0ecd1fa9b77f9a449db785cf1bf"
 }

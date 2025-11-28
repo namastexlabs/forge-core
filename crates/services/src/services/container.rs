@@ -625,7 +625,7 @@ pub trait ContainerService {
             _ => None,
         } {
             let create_executor_data = CreateExecutorSession {
-                task_attempt_id: task_attempt.id,
+                task_attempt_id: Some(task_attempt.id),
                 execution_process_id: execution_process.id,
                 prompt: Some(prompt),
             };
@@ -914,7 +914,7 @@ pub trait ContainerService {
             _ => None,
         } {
             let create_executor_data = CreateExecutorSession {
-                task_attempt_id: Uuid::nil(), // Not associated with a task attempt
+                task_attempt_id: None, // ExecutionRun-based processes have no TaskAttempt
                 execution_process_id: execution_process.id,
                 prompt: Some(prompt),
             };

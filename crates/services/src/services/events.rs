@@ -329,19 +329,18 @@ impl EventService {
                                     msg_store_for_hook.push_patch(patch);
 
                                     // Only push task updates for task-attempt-based processes
-                                    if let Some(attempt_id) = process.task_attempt_id {
-                                        if let Err(err) = EventService::push_task_update_for_attempt(
+                                    if let Some(attempt_id) = process.task_attempt_id
+                                        && let Err(err) = EventService::push_task_update_for_attempt(
                                             &db.pool,
                                             msg_store_for_hook.clone(),
                                             attempt_id,
                                         )
                                         .await
-                                        {
-                                            tracing::error!(
-                                                "Failed to push task update after execution process change: {:?}",
-                                                err
-                                            );
-                                        }
+                                    {
+                                        tracing::error!(
+                                            "Failed to push task update after execution process change: {:?}",
+                                            err
+                                        );
                                     }
 
                                     return;

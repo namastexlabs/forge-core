@@ -10,7 +10,7 @@
 //! Run with: cargo test --package services --test execution_run_model
 
 use db::{
-    models::{execution_run::ExecutionRun, project::Project},
+    models::{execution_run::ExecutionRun, project::{CreateProject, Project}},
     DBService,
 };
 use tempfile::TempDir;
@@ -35,21 +35,23 @@ async fn setup_test_db() -> (DBService, TempDir) {
 async fn create_test_project(pool: &sqlx::SqlitePool) -> Uuid {
     let project_id = Uuid::new_v4();
     // Use unique git_repo_path per project
-    let git_repo_path = format!("/tmp/test-repo-{}", project_id);
+    let git_repo_path = format!("/tmp/test-repo-{project_id}");
 
-    // Use Project::create instead of raw SQL
-    Project::create(
-        pool,
-        project_id,
-        "Test Project",
-        &git_repo_path,
-        None, // dev_script
-        None, // cleanup_script
-        None, // copy_files
-        None, // commit_prompt
-    )
-    .await
-    .unwrap();
+    // Use Project::create with CreateProject struct
+    let create_data = CreateProject {
+        name: "Test Project".to_string(),
+        git_repo_path,
+        use_existing_repo: false,
+        setup_script: None,
+        dev_script: None,
+        cleanup_script: None,
+        copy_files: None,
+        commit_prompt: None,
+    };
+
+    Project::create(pool, &create_data, project_id)
+        .await
+        .unwrap();
 
     project_id
 }
@@ -127,7 +129,7 @@ async fn test_execution_run_fetch_all_with_project_filter() {
         let create_data = db::models::execution_run::CreateExecutionRun {
             executor: executors::executors::BaseCodingAgent::ClaudeCode,
             base_branch: "main".to_string(),
-            prompt: format!("Project 1 run {}", i),
+            prompt: format!("Project 1 run {i}"),
         };
         ExecutionRun::create(
             pool,
@@ -146,7 +148,7 @@ async fn test_execution_run_fetch_all_with_project_filter() {
         let create_data = db::models::execution_run::CreateExecutionRun {
             executor: executors::executors::BaseCodingAgent::ClaudeCode,
             base_branch: "main".to_string(),
-            prompt: format!("Project 2 run {}", i),
+            prompt: format!("Project 2 run {i}"),
         };
         ExecutionRun::create(
             pool,

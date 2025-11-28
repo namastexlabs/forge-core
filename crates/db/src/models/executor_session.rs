@@ -41,7 +41,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id: Option<Uuid>",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -66,7 +66,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id: Option<Uuid>",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -92,7 +92,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id: Option<Uuid>",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -117,7 +117,7 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id: Option<Uuid>",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
@@ -144,7 +144,7 @@ impl ExecutorSession {
         let now = Utc::now();
 
         tracing::debug!(
-            "Creating executor session: id={}, task_attempt_id={}, execution_process_id={}, external_session_id=None (will be set later)",
+            "Creating executor session: id={}, task_attempt_id={:?}, execution_process_id={}, external_session_id=None (will be set later)",
             session_id,
             data.task_attempt_id,
             data.execution_process_id
@@ -159,7 +159,7 @@ impl ExecutorSession {
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id: Option<Uuid>",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,

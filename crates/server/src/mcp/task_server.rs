@@ -959,6 +959,7 @@ impl TaskServer {
 
 #[tool_handler]
 impl ServerHandler for TaskServer {
+    #[allow(clippy::manual_async_fn)]
     fn initialize(
         &self,
         request: InitializeRequestParam,

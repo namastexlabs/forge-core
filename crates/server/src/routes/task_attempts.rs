@@ -683,7 +683,7 @@ pub async fn merge_task_attempt(
             sessions
                 .into_iter()
                 .filter_map(|s| s.commit_message)
-                .last() // Get most recent commit message
+                .next_back() // Get most recent commit message
         });
 
     // Generate high-quality commit message

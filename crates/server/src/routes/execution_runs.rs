@@ -103,7 +103,7 @@ pub async fn create_execution_run(
 
     // Create the execution run record
     let create_run = CreateExecutionRun {
-        executor: payload.executor_profile_id.executor.clone(),
+        executor: payload.executor_profile_id.executor,
         base_branch: base_branch.clone(),
         prompt: payload.prompt.clone(),
     };

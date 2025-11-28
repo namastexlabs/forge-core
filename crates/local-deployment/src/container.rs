@@ -373,9 +373,9 @@ impl LocalContainerService {
                         "executor": ctx.execution_process.executor_action().ok()
                             .and_then(|action| match &action.typ {
                                 executors::actions::ExecutorActionType::CodingAgentInitialRequest(req) =>
-                                    Some(req.executor_profile_id.executor.clone()),
+                                    Some(req.executor_profile_id.executor),
                                 executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(req) =>
-                                    Some(req.executor_profile_id.executor.clone()),
+                                    Some(req.executor_profile_id.executor),
                                 _ => None,
                             })
                             .map(|e| e.to_string())
@@ -1293,17 +1293,17 @@ impl LocalContainerService {
             }
 
             // Record after-head commit OID (best-effort)
-            if let Ok(Some(run)) = ExecutionRun::find_by_id(&db.pool, run_id).await {
-                if let Some(container_ref) = &run.container_ref {
-                    let worktree = PathBuf::from(container_ref);
-                    if let Ok(head) = container.git().get_head_info(&worktree) {
-                        let _ = ExecutionProcess::update_after_head_commit(
-                            &db.pool,
-                            exec_id,
-                            &head.oid,
-                        )
-                        .await;
-                    }
+            if let Ok(Some(run)) = ExecutionRun::find_by_id(&db.pool, run_id).await
+                && let Some(container_ref) = &run.container_ref
+            {
+                let worktree = PathBuf::from(container_ref);
+                if let Ok(head) = container.git().get_head_info(&worktree) {
+                    let _ = ExecutionProcess::update_after_head_commit(
+                        &db.pool,
+                        exec_id,
+                        &head.oid,
+                    )
+                    .await;
                 }
             }
 

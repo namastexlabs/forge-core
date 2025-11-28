@@ -14,6 +14,12 @@ pub enum CommitMessageError {
 /// Service for generating high-quality conventional commit messages
 pub struct CommitMessageGenerator;
 
+impl Default for CommitMessageGenerator {
+    fn default() -> Self {
+        Self
+    }
+}
+
 impl CommitMessageGenerator {
     pub fn new() -> Self {
         Self
@@ -34,10 +40,10 @@ impl CommitMessageGenerator {
         _worktree_path: &Path,
     ) -> Result<String, CommitMessageError> {
         // Priority 1: Use executor-generated commit message
-        if let Some(msg) = executor_commit_message {
-            if Self::is_valid_commit_message(msg) {
-                return Ok(msg.to_string());
-            }
+        if let Some(msg) = executor_commit_message
+            && Self::is_valid_commit_message(msg)
+        {
+            return Ok(msg.to_string());
         }
 
         // Priority 2: TODO - Analyze diff and generate (future enhancement)
@@ -65,7 +71,7 @@ impl CommitMessageGenerator {
 
         // Add GitHub issue reference if available
         if let Some(issue) = github_issue {
-            message = format!("{} (#{issue})", message);
+            message = format!("{message} (#{issue})");
         }
 
         // Add description if it exists and is reasonable
