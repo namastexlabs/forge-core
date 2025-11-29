@@ -209,9 +209,15 @@ impl LocalContainerService {
             }
 
             let worktree_path_str = path.to_string_lossy().to_string();
-            if let Ok(false) =
-                TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str).await
-            {
+            // Check if worktree is referenced by either TaskAttempt OR ExecutionRun
+            let task_exists = TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str)
+                .await
+                .unwrap_or(true);
+            let run_exists = ExecutionRun::container_ref_exists(&self.db().pool, &worktree_path_str)
+                .await
+                .unwrap_or(true);
+
+            if !task_exists && !run_exists {
                 // This is an orphaned worktree - delete it
                 tracing::info!("Found orphaned worktree: {}", worktree_path_str);
                 if let Err(e) = WorktreeManager::cleanup_worktree(&path, None).await {
