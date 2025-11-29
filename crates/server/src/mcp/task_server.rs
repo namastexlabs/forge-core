@@ -28,7 +28,10 @@ use serde_json;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::routes::task_attempts::CreateTaskAttemptBody;
+use crate::routes::{
+    execution_runs::CreateExecutionRunRequest as ApiCreateExecutionRunRequest,
+    task_attempts::CreateTaskAttemptBody,
+};
 
 const SUPPORTED_PROTOCOL_VERSIONS: [ProtocolVersion; 2] = [
     ProtocolVersion::V_2025_03_26,
@@ -247,6 +250,84 @@ pub struct GetTaskRequest {
 #[derive(Debug, Serialize, schemars::JsonSchema)]
 pub struct GetTaskResponse {
     pub task: TaskDetails,
+}
+
+// ============================================================================
+// ExecutionRun MCP Types
+// ============================================================================
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct StartExecutionRunRequest {
+    #[schemars(description = "The ID of the project to run in")]
+    pub project_id: Uuid,
+    #[schemars(description = "The prompt/instruction for the executor")]
+    pub prompt: String,
+    #[schemars(
+        description = "The coding agent executor to use ('CLAUDE_CODE', 'CODEX', 'GEMINI', 'CURSOR_AGENT', 'OPENCODE')"
+    )]
+    pub executor: String,
+    #[schemars(description = "Optional executor variant")]
+    pub variant: Option<String>,
+    #[schemars(description = "The base branch to use (defaults to 'main')")]
+    pub base_branch: Option<String>,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct StartExecutionRunResponse {
+    pub execution_run_id: String,
+    pub project_id: String,
+    pub branch: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct ListExecutionRunsRequest {
+    #[schemars(description = "Optional project ID filter")]
+    pub project_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct ExecutionRunSummary {
+    pub id: String,
+    pub project_id: String,
+    pub branch: String,
+    pub target_branch: String,
+    pub executor: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct ListExecutionRunsResponse {
+    pub runs: Vec<ExecutionRunSummary>,
+    pub count: usize,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct GetExecutionRunRequest {
+    #[schemars(description = "The ID of the execution run")]
+    pub execution_run_id: Uuid,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct GetExecutionRunResponse {
+    pub id: String,
+    pub project_id: String,
+    pub branch: String,
+    pub target_branch: String,
+    pub executor: String,
+    pub prompt: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct StopExecutionRunRequest {
+    #[schemars(description = "The ID of the execution run to stop")]
+    pub execution_run_id: Uuid,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct StopExecutionRunResponse {
+    pub stopped: bool,
+    pub execution_run_id: String,
 }
 
 #[derive(Debug, Clone)]
@@ -713,10 +794,172 @@ impl TaskServer {
 
         TaskServer::success(&response)
     }
+
+    // =========================================================================
+    // ExecutionRun Tools - Lightweight executor invocation without Task overhead
+    // =========================================================================
+
+    #[tool(
+        description = "Start a lightweight execution run. Unlike task attempts, runs don't require creating a task first. Ideal for serverless micro-tasks like generating commit messages or PR descriptions."
+    )]
+    async fn start_execution_run(
+        &self,
+        Parameters(StartExecutionRunRequest {
+            project_id,
+            prompt,
+            executor,
+            variant,
+            base_branch,
+        }): Parameters<StartExecutionRunRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let executor_trimmed = executor.trim();
+        if executor_trimmed.is_empty() {
+            return Self::err("Executor must not be empty.".to_string(), None::<String>);
+        }
+
+        let normalized_executor = executor_trimmed.replace('-', "_").to_ascii_uppercase();
+        let base_executor = match BaseCodingAgent::from_str(&normalized_executor) {
+            Ok(exec) => exec,
+            Err(_) => {
+                return Self::err(
+                    format!("Unknown executor '{executor_trimmed}'."),
+                    None::<String>,
+                );
+            }
+        };
+
+        let variant = variant.and_then(|v| {
+            let trimmed = v.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+
+        let executor_profile_id = ExecutorProfileId {
+            executor: base_executor,
+            variant,
+        };
+
+        let payload = ApiCreateExecutionRunRequest {
+            project_id,
+            prompt,
+            executor_profile_id,
+            base_branch,
+        };
+
+        let url = self.url("/api/execution-runs");
+
+        // Response contains { execution_run, execution_process }
+        #[derive(Deserialize)]
+        struct ApiExecutionRunResponse {
+            execution_run: db::models::execution_run::ExecutionRun,
+        }
+
+        let resp: ApiExecutionRunResponse =
+            match self.send_json(self.client.post(&url).json(&payload)).await {
+                Ok(r) => r,
+                Err(e) => return Ok(e),
+            };
+
+        let response = StartExecutionRunResponse {
+            execution_run_id: resp.execution_run.id.to_string(),
+            project_id: resp.execution_run.project_id.to_string(),
+            branch: resp.execution_run.branch,
+        };
+
+        TaskServer::success(&response)
+    }
+
+    #[tool(description = "List execution runs, optionally filtered by project_id")]
+    async fn list_execution_runs(
+        &self,
+        Parameters(ListExecutionRunsRequest { project_id }): Parameters<ListExecutionRunsRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let url = match project_id {
+            Some(pid) => self.url(&format!("/api/execution-runs?project_id={}", pid)),
+            None => self.url("/api/execution-runs"),
+        };
+
+        let runs: Vec<db::models::execution_run::ExecutionRun> =
+            match self.send_json(self.client.get(&url)).await {
+                Ok(r) => r,
+                Err(e) => return Ok(e),
+            };
+
+        let summaries: Vec<ExecutionRunSummary> = runs
+            .into_iter()
+            .map(|r| ExecutionRunSummary {
+                id: r.id.to_string(),
+                project_id: r.project_id.to_string(),
+                branch: r.branch,
+                target_branch: r.target_branch,
+                executor: r.executor,
+                created_at: r.created_at.to_rfc3339(),
+            })
+            .collect();
+
+        let response = ListExecutionRunsResponse {
+            count: summaries.len(),
+            runs: summaries,
+        };
+
+        TaskServer::success(&response)
+    }
+
+    #[tool(description = "Get details of a specific execution run")]
+    async fn get_execution_run(
+        &self,
+        Parameters(GetExecutionRunRequest { execution_run_id }): Parameters<GetExecutionRunRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let url = self.url(&format!("/api/execution-runs/{}", execution_run_id));
+
+        let run: db::models::execution_run::ExecutionRun =
+            match self.send_json(self.client.get(&url)).await {
+                Ok(r) => r,
+                Err(e) => return Ok(e),
+            };
+
+        let response = GetExecutionRunResponse {
+            id: run.id.to_string(),
+            project_id: run.project_id.to_string(),
+            branch: run.branch,
+            target_branch: run.target_branch,
+            executor: run.executor,
+            prompt: run.prompt,
+            created_at: run.created_at.to_rfc3339(),
+        };
+
+        TaskServer::success(&response)
+    }
+
+    #[tool(description = "Stop a running execution run")]
+    async fn stop_execution_run(
+        &self,
+        Parameters(StopExecutionRunRequest { execution_run_id }): Parameters<StopExecutionRunRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let url = self.url(&format!("/api/execution-runs/{}/stop", execution_run_id));
+
+        if let Err(e) = self
+            .send_json::<serde_json::Value>(self.client.post(&url))
+            .await
+        {
+            return Ok(e);
+        }
+
+        let response = StopExecutionRunResponse {
+            stopped: true,
+            execution_run_id: execution_run_id.to_string(),
+        };
+
+        TaskServer::success(&response)
+    }
 }
 
 #[tool_handler]
 impl ServerHandler for TaskServer {
+    #[allow(clippy::manual_async_fn)]
     fn initialize(
         &self,
         request: InitializeRequestParam,

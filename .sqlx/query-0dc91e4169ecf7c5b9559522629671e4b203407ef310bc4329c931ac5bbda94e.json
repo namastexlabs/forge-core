@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT er.id AS \"run_id!: Uuid\",\n                      er.project_id AS \"project_id!: Uuid\"\n               FROM execution_runs er\n               WHERE er.container_ref = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "run_id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "project_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "0dc91e4169ecf7c5b9559522629671e4b203407ef310bc4329c931ac5bbda94e"
+}

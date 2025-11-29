@@ -1,6 +1,8 @@
 pub mod analytics;
 pub mod approvals;
 pub mod auth;
+pub mod commit_message_generator;
+pub mod commit_validator;
 pub mod config;
 pub mod container;
 pub mod diff_stream;

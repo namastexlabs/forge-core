@@ -1,51 +1,51 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "required": [
-    "model"
-  ],
-  "type": "object",
   "properties": {
+    "additional_params": {
+      "description": "Additional parameters to append to the base command",
+      "items": {
+        "type": "string"
+      },
+      "title": "Additional Parameters",
+      "type": [
+        "array",
+        "null"
+      ]
+    },
     "append_prompt": {
-      "title": "Append Prompt",
+      "default": null,
       "description": "Extra text appended to the prompt",
+      "format": "textarea",
+      "title": "Append Prompt",
       "type": [
         "string",
         "null"
-      ],
-      "format": "textarea",
-      "default": null
+      ]
+    },
+    "base_command_override": {
+      "description": "Override the base command with a custom command",
+      "title": "Base Command Override",
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "model": {
-      "type": "string",
       "enum": [
         "default",
         "flash"
-      ]
+      ],
+      "type": "string"
     },
     "yolo": {
       "type": [
         "boolean",
         "null"
       ]
-    },
-    "base_command_override": {
-      "title": "Base Command Override",
-      "description": "Override the base command with a custom command",
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "additional_params": {
-      "title": "Additional Parameters",
-      "description": "Additional parameters to append to the base command",
-      "type": [
-        "array",
-        "null"
-      ],
-      "items": {
-        "type": "string"
-      }
     }
-  }
+  },
+  "required": [
+    "model"
+  ],
+  "type": "object"
 }

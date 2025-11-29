@@ -1,6 +1,7 @@
 pub mod draft;
 pub mod execution_process;
 pub mod execution_process_logs;
+pub mod execution_run;
 pub mod executor_session;
 pub mod image;
 pub mod merge;

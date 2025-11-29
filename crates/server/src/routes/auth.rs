@@ -39,6 +39,7 @@ async fn device_start(
 
 #[derive(Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[ts(use_ts_enum)]
 pub enum DevicePollStatus {
     SlowDown,
     AuthorizationPending,
@@ -47,6 +48,7 @@ pub enum DevicePollStatus {
 
 #[derive(Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[ts(use_ts_enum)]
 pub enum CheckTokenResponse {
     Valid,
     Invalid,

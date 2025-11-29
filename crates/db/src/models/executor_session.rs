@@ -7,18 +7,19 @@ use uuid::Uuid;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct ExecutorSession {
     pub id: Uuid,
-    pub task_attempt_id: Uuid,
+    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
-    pub session_id: Option<String>, // External session ID from Claude/Amp
-    pub prompt: Option<String>,     // The prompt sent to the executor
-    pub summary: Option<String>,    // Final assistant message/summary
+    pub session_id: Option<String>,     // External session ID from Claude/Amp
+    pub prompt: Option<String>,         // The prompt sent to the executor
+    pub summary: Option<String>,        // Final assistant message/summary
+    pub commit_message: Option<String>, // Generated conventional commit message
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateExecutorSession {
-    pub task_attempt_id: Uuid,
+    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
     pub prompt: Option<String>,
 }
@@ -29,6 +30,7 @@ pub struct UpdateExecutorSession {
     pub session_id: Option<String>,
     pub prompt: Option<String>,
     pub summary: Option<String>,
+    pub commit_message: Option<String>,
 }
 
 impl ExecutorSession {
@@ -37,16 +39,17 @@ impl ExecutorSession {
     pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             ExecutorSession,
-            r#"SELECT 
-                id as "id!: Uuid", 
-                task_attempt_id as "task_attempt_id!: Uuid", 
-                execution_process_id as "execution_process_id!: Uuid", 
-                session_id, 
+            r#"SELECT
+                id as "id!: Uuid",
+                task_attempt_id as "task_attempt_id: Uuid",
+                execution_process_id as "execution_process_id!: Uuid",
+                session_id,
                 prompt,
                 summary,
-                created_at as "created_at!: DateTime<Utc>", 
+                commit_message,
+                created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
-               FROM executor_sessions 
+               FROM executor_sessions
                WHERE id = $1"#,
             id
         )
@@ -63,11 +66,12 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
                 summary,
+                commit_message,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM executor_sessions
@@ -86,17 +90,18 @@ impl ExecutorSession {
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             ExecutorSession,
-            r#"SELECT 
-                id as "id!: Uuid", 
-                task_attempt_id as "task_attempt_id!: Uuid", 
-                execution_process_id as "execution_process_id!: Uuid", 
-                session_id, 
+            r#"SELECT
+                id as "id!: Uuid",
+                task_attempt_id as "task_attempt_id: Uuid",
+                execution_process_id as "execution_process_id!: Uuid",
+                session_id,
                 prompt,
                 summary,
-                created_at as "created_at!: DateTime<Utc>", 
+                commit_message,
+                created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
-               FROM executor_sessions 
-               WHERE task_attempt_id = $1 
+               FROM executor_sessions
+               WHERE task_attempt_id = $1
                ORDER BY created_at ASC"#,
             task_attempt_id
         )
@@ -112,11 +117,12 @@ impl ExecutorSession {
             ExecutorSession,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
                 summary,
+                commit_message,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM executor_sessions
@@ -138,7 +144,7 @@ impl ExecutorSession {
         let now = Utc::now();
 
         tracing::debug!(
-            "Creating executor session: id={}, task_attempt_id={}, execution_process_id={}, external_session_id=None (will be set later)",
+            "Creating executor session: id={}, task_attempt_id={:?}, execution_process_id={}, external_session_id=None (will be set later)",
             session_id,
             data.task_attempt_id,
             data.execution_process_id
@@ -147,17 +153,18 @@ impl ExecutorSession {
         sqlx::query_as!(
             ExecutorSession,
             r#"INSERT INTO executor_sessions (
-                id, task_attempt_id, execution_process_id, session_id, prompt, summary,
+                id, task_attempt_id, execution_process_id, session_id, prompt, summary, commit_message,
                 created_at, updated_at
                )
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_attempt_id as "task_attempt_id: Uuid",
                 execution_process_id as "execution_process_id!: Uuid",
                 session_id,
                 prompt,
                 summary,
+                commit_message,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             session_id,
@@ -166,6 +173,7 @@ impl ExecutorSession {
             None::<String>, // session_id initially None until parsed from output
             data.prompt,
             None::<String>, // summary initially None
+            None::<String>, // commit_message initially None
             now,            // created_at
             now             // updated_at
         )
@@ -224,10 +232,31 @@ impl ExecutorSession {
     ) -> Result<(), sqlx::Error> {
         let now = Utc::now();
         sqlx::query!(
-            r#"UPDATE executor_sessions 
-               SET summary = $1, updated_at = $2 
+            r#"UPDATE executor_sessions
+               SET summary = $1, updated_at = $2
                WHERE execution_process_id = $3"#,
             summary,
+            now,
+            execution_process_id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Update executor session commit message
+    pub async fn update_commit_message(
+        pool: &SqlitePool,
+        execution_process_id: Uuid,
+        commit_message: &str,
+    ) -> Result<(), sqlx::Error> {
+        let now = Utc::now();
+        sqlx::query!(
+            r#"UPDATE executor_sessions
+               SET commit_message = $1, updated_at = $2
+               WHERE execution_process_id = $3"#,
+            commit_message,
             now,
             execution_process_id
         )

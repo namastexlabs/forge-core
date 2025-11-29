@@ -61,13 +61,13 @@ impl DBService {
         // The third slash is the root directory indicator
         if abs_path_str.starts_with('/') {
             // Unix absolute path - sqlite:// + /path = sqlite:///path
-            format!("sqlite://{}", abs_path_str)
+            format!("sqlite://{abs_path_str}")
         } else if abs_path_str.len() >= 2 && abs_path_str.chars().nth(1) == Some(':') {
             // Windows absolute path (C:\...) - needs special handling
-            format!("sqlite:///{}", abs_path_str)
+            format!("sqlite:///{abs_path_str}")
         } else {
             // Fallback - treat as relative (shouldn't happen after is_absolute check)
-            format!("sqlite://{}", abs_path_str)
+            format!("sqlite://{abs_path_str}")
         }
     }
 

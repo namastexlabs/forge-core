@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE execution_runs SET container_ref = $1, updated_at = $2 WHERE id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "00356e3b36dc58d6b51d1c2ca7be2ea61f38a770221a81c74ed50a30d5641f02"
+}

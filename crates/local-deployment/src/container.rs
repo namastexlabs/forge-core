@@ -16,6 +16,7 @@ use db::{
         execution_process::{
             ExecutionContext, ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus,
         },
+        execution_run::ExecutionRun,
         executor_session::ExecutorSession,
         image::TaskImage,
         merge::Merge,
@@ -208,9 +209,15 @@ impl LocalContainerService {
             }
 
             let worktree_path_str = path.to_string_lossy().to_string();
-            if let Ok(false) =
-                TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str).await
-            {
+            // Check if worktree is referenced by either TaskAttempt OR ExecutionRun
+            let task_exists = TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str)
+                .await
+                .unwrap_or(true);
+            let run_exists = ExecutionRun::container_ref_exists(&self.db().pool, &worktree_path_str)
+                .await
+                .unwrap_or(true);
+
+            if !task_exists && !run_exists {
                 // This is an orphaned worktree - delete it
                 tracing::info!("Found orphaned worktree: {}", worktree_path_str);
                 if let Err(e) = WorktreeManager::cleanup_worktree(&path, None).await {
@@ -372,9 +379,9 @@ impl LocalContainerService {
                         "executor": ctx.execution_process.executor_action().ok()
                             .and_then(|action| match &action.typ {
                                 executors::actions::ExecutorActionType::CodingAgentInitialRequest(req) =>
-                                    Some(req.executor_profile_id.executor.clone()),
+                                    Some(req.executor_profile_id.executor),
                                 executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(req) =>
-                                    Some(req.executor_profile_id.executor.clone()),
+                                    Some(req.executor_profile_id.executor),
                                 _ => None,
                             })
                             .map(|e| e.to_string())
@@ -1131,9 +1138,200 @@ impl ContainerService for LocalContainerService {
         }
         Ok(())
     }
+
+    // =========================================================================
+    // ExecutionRun methods - lightweight executor invocation without Task
+    // =========================================================================
+
+    /// Create a worktree for an execution run
+    async fn create_for_run(&self, execution_run: &ExecutionRun) -> Result<ContainerRef, ContainerError> {
+        let project = Project::find_by_id(&self.db.pool, execution_run.project_id)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)?;
+
+        let worktree_dir_name = Self::dir_name_from_execution_run(&execution_run.id);
+        let worktree_path = WorktreeManager::get_worktree_base_dir().join(&worktree_dir_name);
+
+        // Create worktree for isolated work
+        WorktreeManager::create_worktree(
+            &project.git_repo_path,
+            &execution_run.branch,
+            &worktree_path,
+            &execution_run.target_branch,
+            true, // create new branch
+        )
+        .await?;
+
+        // Copy files specified in the project's copy_files field
+        if let Some(copy_files) = &project.copy_files
+            && !copy_files.trim().is_empty()
+        {
+            self.copy_project_files(&project.git_repo_path, &worktree_path, copy_files)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to copy project files: {}", e);
+                });
+        }
+
+        // Update container_ref in the database
+        ExecutionRun::update_container_ref(
+            &self.db.pool,
+            execution_run.id,
+            &worktree_path.to_string_lossy(),
+        )
+        .await?;
+
+        Ok(worktree_path.to_string_lossy().to_string())
+    }
+
+    /// Inner start execution for runs
+    async fn start_execution_inner_for_run(
+        &self,
+        execution_run: &ExecutionRun,
+        execution_process: &ExecutionProcess,
+        executor_action: &ExecutorAction,
+    ) -> Result<(), ContainerError> {
+        // Get the worktree path
+        let container_ref = execution_run
+            .container_ref
+            .as_ref()
+            .ok_or(ContainerError::Other(anyhow!(
+                "Container ref not found for execution run"
+            )))?;
+        let current_dir = PathBuf::from(container_ref);
+
+        let approvals_service: Arc<dyn ExecutorApprovalService> =
+            match executor_action.base_executor() {
+                Some(BaseCodingAgent::Codex) | Some(BaseCodingAgent::ClaudeCode) => {
+                    ExecutorApprovalBridge::new(
+                        self.approvals.clone(),
+                        self.db.clone(),
+                        execution_process.id,
+                    )
+                }
+                _ => Arc::new(NoopExecutorApprovalService {}),
+            };
+
+        // Create the child and stream, add to execution tracker
+        let mut spawned = executor_action
+            .spawn(&current_dir, approvals_service)
+            .await?;
+
+        self.track_child_msgs_in_store(execution_process.id, &mut spawned.child)
+            .await;
+
+        self.add_child_to_store(execution_process.id, spawned.child)
+            .await;
+
+        // Spawn exit monitor for execution run - simpler version without task status updates
+        let _hn = self.spawn_exit_monitor_for_run(&execution_process.id, execution_run.id, spawned.exit_signal);
+
+        Ok(())
+    }
 }
 
 impl LocalContainerService {
+    /// Generate directory name for execution run worktree
+    fn dir_name_from_execution_run(run_id: &Uuid) -> String {
+        format!("run-{}", short_uuid(run_id))
+    }
+
+    /// Spawn exit monitor specifically for execution runs (no task status updates)
+    fn spawn_exit_monitor_for_run(
+        &self,
+        exec_id: &Uuid,
+        run_id: Uuid,
+        exit_signal: Option<tokio::sync::oneshot::Receiver<()>>,
+    ) -> JoinHandle<()> {
+        let exec_id = *exec_id;
+        let child_store = self.child_store.clone();
+        let msg_stores = self.msg_stores.clone();
+        let db = self.db.clone();
+        let container = self.clone();
+
+        let mut process_exit_rx = self.spawn_os_exit_watcher(exec_id);
+
+        tokio::spawn(async move {
+            let mut exit_signal_future = exit_signal
+                .map(|rx| rx.map(|_| ()).boxed())
+                .unwrap_or_else(|| std::future::pending::<()>().boxed());
+
+            let status_result: std::io::Result<std::process::ExitStatus>;
+
+            tokio::select! {
+                _ = &mut exit_signal_future => {
+                    if let Some(child_lock) = child_store.read().await.get(&exec_id).cloned() {
+                        let mut child = child_lock.write().await;
+                        if let Err(err) = command::kill_process_group(&mut child).await {
+                            tracing::error!("Failed to kill process group after exit signal: {} {}", exec_id, err);
+                        }
+                    }
+                    status_result = Ok(success_exit_status());
+                }
+                exit_status_result = &mut process_exit_rx => {
+                    status_result = exit_status_result.unwrap_or_else(|e| Err(std::io::Error::other(e)));
+                }
+            }
+
+            let (exit_code, status) = match status_result {
+                Ok(exit_status) => {
+                    let code = exit_status.code().unwrap_or(-1) as i64;
+                    let status = if exit_status.success() {
+                        ExecutionProcessStatus::Completed
+                    } else {
+                        ExecutionProcessStatus::Failed
+                    };
+                    (Some(code), status)
+                }
+                Err(_) => (None, ExecutionProcessStatus::Failed),
+            };
+
+            if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
+                && let Err(e) =
+                    ExecutionProcess::update_completion(&db.pool, exec_id, status.clone(), exit_code).await
+            {
+                tracing::error!("Failed to update execution process completion: {}", e);
+            }
+
+            // Update executor session summary if available
+            if let Err(e) = container.update_executor_session_summary(&exec_id).await {
+                tracing::warn!("Failed to update executor session summary: {}", e);
+            }
+
+            // Record after-head commit OID (best-effort)
+            if let Ok(Some(run)) = ExecutionRun::find_by_id(&db.pool, run_id).await
+                && let Some(container_ref) = &run.container_ref
+            {
+                let worktree = PathBuf::from(container_ref);
+                if let Ok(head) = container.git().get_head_info(&worktree) {
+                    let _ = ExecutionProcess::update_after_head_commit(
+                        &db.pool,
+                        exec_id,
+                        &head.oid,
+                    )
+                    .await;
+                }
+            }
+
+            // Cleanup msg store
+            if let Some(msg_arc) = msg_stores.write().await.remove(&exec_id) {
+                msg_arc.push_finished();
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                match Arc::try_unwrap(msg_arc) {
+                    Ok(inner) => drop(inner),
+                    Err(arc) => tracing::error!(
+                        "There are still {} strong Arcs to MsgStore for {}",
+                        Arc::strong_count(&arc),
+                        exec_id
+                    ),
+                }
+            }
+
+            // Cleanup child handle
+            child_store.write().await.remove(&exec_id);
+        })
+    }
+
     /// Extract the last assistant message from the MsgStore history
     fn extract_last_assistant_message(&self, exec_id: &Uuid) -> Option<String> {
         // Get the MsgStore for this execution

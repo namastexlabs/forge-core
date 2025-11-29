@@ -5,8 +5,8 @@ use axum::{
     response::Response,
 };
 use db::models::{
-    execution_process::ExecutionProcess, project::Project, tag::Tag, task::Task,
-    task_attempt::TaskAttempt,
+    execution_process::ExecutionProcess, execution_run::ExecutionRun, project::Project, tag::Tag,
+    task::Task, task_attempt::TaskAttempt,
 };
 use deployment::Deployment;
 use uuid::Uuid;
@@ -201,5 +201,37 @@ pub async fn load_tag_middleware(
     request.extensions_mut().insert(tag);
 
     // Continue with the next middleware/handler
+    Ok(next.run(request).await)
+}
+
+// Middleware that loads and injects ExecutionRun based on the path parameter
+pub async fn load_execution_run_middleware(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_run_id): Path<Uuid>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Load the ExecutionRun from the database
+    let execution_run = match ExecutionRun::find_by_id(&deployment.db().pool, execution_run_id).await
+    {
+        Ok(Some(run)) => run,
+        Ok(None) => {
+            tracing::warn!("ExecutionRun {} not found", execution_run_id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(e) => {
+            tracing::error!(
+                "Failed to fetch ExecutionRun {}: {}",
+                execution_run_id,
+                e
+            );
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Insert the execution run into extensions
+    request.extensions_mut().insert(execution_run);
+
+    // Continue on
     Ok(next.run(request).await)
 }

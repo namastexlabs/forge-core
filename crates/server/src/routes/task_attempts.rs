@@ -16,6 +16,7 @@ use axum::{
 use db::models::{
     draft::{Draft, DraftType},
     execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
+    executor_session::ExecutorSession,
     merge::{Merge, MergeStatus, PrMerge, PullRequestInfo},
     project::{Project, ProjectError},
     task::{Task, TaskRelationships, TaskStatus},
@@ -34,6 +35,8 @@ use executors::{
 use git2::BranchType;
 use serde::{Deserialize, Serialize};
 use services::services::{
+    commit_message_generator::CommitMessageGenerator,
+    commit_validator::{CommitValidator, WarningSeverity},
     container::ContainerService,
     git::{ConflictOp, WorktreeResetOptions},
     github_service::{CreatePrRequest, GitHubService, GitHubServiceError},
@@ -275,7 +278,7 @@ pub async fn follow_up(
 
     let executor_profile_id = ExecutorProfileId {
         executor: initial_executor_profile_id.executor,
-        variant: payload.variant,
+        variant: payload.variant.or(initial_executor_profile_id.variant.clone()),
     };
 
     // Get parent task
@@ -300,7 +303,7 @@ pub async fn follow_up(
                 .ok_or(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                     "Process not found".to_string(),
                 )))?;
-        if process.task_attempt_id != task_attempt.id {
+        if process.task_attempt_id != Some(task_attempt.id) {
             return Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                 "Process does not belong to this attempt".to_string(),
             )));
@@ -421,7 +424,7 @@ pub async fn replace_process(
             .ok_or(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
                 "Process not found".to_string(),
             )))?;
-    if process.task_attempt_id != task_attempt.id {
+    if process.task_attempt_id != Some(task_attempt.id) {
         return Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
             "Process does not belong to this attempt".to_string(),
         )));
@@ -672,18 +675,53 @@ pub async fn merge_task_attempt(
     let worktree_path_buf = ensure_worktree_path(&deployment, &task_attempt).await?;
     let worktree_path = worktree_path_buf.as_path();
 
-    let task_uuid_str = task.id.to_string();
-    let first_uuid_section = task_uuid_str.split('-').next().unwrap_or(&task_uuid_str);
+    // Try to get executor-generated commit message
+    let executor_commit_message = ExecutorSession::find_by_task_attempt_id(pool, task_attempt.id)
+        .await
+        .ok()
+        .and_then(|sessions| {
+            sessions
+                .into_iter()
+                .filter_map(|s| s.commit_message)
+                .next_back() // Get most recent commit message
+        });
 
-    // Create commit message with task title and description
-    let mut commit_message = format!("{} (automagik-forge {})", ctx.task.title, first_uuid_section);
+    // Generate high-quality commit message
+    let commit_message_generator = CommitMessageGenerator::new();
+    let commit_message = commit_message_generator
+        .generate(
+            &ctx.task.title,
+            ctx.task.description.as_deref(),
+            None, // TODO: github_issue_number not yet on Task model
+            executor_commit_message.as_deref(),
+            worktree_path,
+        )
+        .unwrap_or_else(|_| {
+            // Final fallback: just use task title
+            ctx.task.title.clone()
+        });
 
-    // Add description on next line if it exists
-    if let Some(description) = &ctx.task.description
-        && !description.trim().is_empty()
-    {
-        commit_message.push_str("\n\n");
-        commit_message.push_str(description);
+    // Validate commit message quality
+    let validation_warnings = CommitValidator::validate(&commit_message);
+
+    // Log warnings
+    for warning in &validation_warnings {
+        match warning.severity {
+            WarningSeverity::Error => {
+                tracing::error!("Commit message error: {}", warning.message);
+            }
+            WarningSeverity::Warning => {
+                tracing::warn!("Commit message warning: {}", warning.message);
+            }
+            WarningSeverity::Info => {
+                tracing::info!("Commit message info: {}", warning.message);
+            }
+        }
+    }
+
+    // Log if commit doesn't follow conventional commits (informational only)
+    if !CommitValidator::follows_conventional_commits(&commit_message) {
+        tracing::info!("Commit message does not follow conventional commits format");
     }
 
     let merge_commit_id = deployment.git().merge_changes(

@@ -1,45 +1,62 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "properties": {
-    "append_prompt": {
-      "title": "Append Prompt",
-      "description": "Extra text appended to the prompt",
+    "additional_params": {
+      "description": "Additional parameters to append to the base command",
+      "items": {
+        "type": "string"
+      },
+      "title": "Additional Parameters",
       "type": [
-        "string",
+        "array",
         "null"
-      ],
-      "format": "textarea",
-      "default": null
+      ]
     },
-    "sandbox": {
-      "description": "Sandbox policy modes for Codex",
+    "append_prompt": {
+      "default": null,
+      "description": "Extra text appended to the prompt",
+      "format": "textarea",
+      "title": "Append Prompt",
       "type": [
         "string",
         "null"
-      ],
-      "enum": [
-        "auto",
-        "read-only",
-        "workspace-write",
-        "danger-full-access",
-        null
       ]
     },
     "ask_for_approval": {
       "description": "Determines when the user is consulted to approve Codex actions.\n\n- `UnlessTrusted`: Read-only commands are auto-approved. Everything else will\n  ask the user to approve.\n- `OnFailure`: All commands run in a restricted sandbox initially. If a\n  command fails, the user is asked to approve execution without the sandbox.\n- `OnRequest`: The model decides when to ask the user for approval.\n- `Never`: Commands never ask for approval. Commands that fail in the\n  restricted sandbox are not retried.",
-      "type": [
-        "string",
-        "null"
-      ],
       "enum": [
         "unless-trusted",
         "on-failure",
         "on-request",
         "never",
         null
+      ],
+      "type": [
+        "string",
+        "null"
       ]
     },
-    "oss": {
+    "base_command_override": {
+      "description": "Override the base command with a custom command",
+      "title": "Base Command Override",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "base_instructions": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "include_apply_patch_tool": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "include_plan_tool": {
       "type": [
         "boolean",
         "null"
@@ -53,41 +70,47 @@
     },
     "model_reasoning_effort": {
       "description": "Reasoning effort for the underlying model",
-      "type": [
-        "string",
-        "null"
-      ],
       "enum": [
         "low",
         "medium",
         "high",
         null
+      ],
+      "type": [
+        "string",
+        "null"
       ]
     },
     "model_reasoning_summary": {
       "description": "Model reasoning summary style",
-      "type": [
-        "string",
-        "null"
-      ],
       "enum": [
         "auto",
         "concise",
         "detailed",
         "none",
         null
+      ],
+      "type": [
+        "string",
+        "null"
       ]
     },
     "model_reasoning_summary_format": {
       "description": "Format for model reasoning summaries",
-      "type": [
-        "string",
-        "null"
-      ],
       "enum": [
         "none",
         "experimental",
         null
+      ],
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "oss": {
+      "type": [
+        "boolean",
+        "null"
       ]
     },
     "profile": {
@@ -96,42 +119,19 @@
         "null"
       ]
     },
-    "base_instructions": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "include_plan_tool": {
-      "type": [
-        "boolean",
-        "null"
-      ]
-    },
-    "include_apply_patch_tool": {
-      "type": [
-        "boolean",
-        "null"
-      ]
-    },
-    "base_command_override": {
-      "title": "Base Command Override",
-      "description": "Override the base command with a custom command",
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "additional_params": {
-      "title": "Additional Parameters",
-      "description": "Additional parameters to append to the base command",
-      "type": [
-        "array",
-        "null"
+    "sandbox": {
+      "description": "Sandbox policy modes for Codex",
+      "enum": [
+        "auto",
+        "read-only",
+        "workspace-write",
+        "danger-full-access",
+        null
       ],
-      "items": {
-        "type": "string"
-      }
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "type": "object"
