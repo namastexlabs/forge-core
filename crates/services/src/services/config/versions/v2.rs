@@ -177,6 +177,7 @@ impl GitHubConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, EnumString)]
+#[ts(use_ts_enum)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum SoundFile {
@@ -290,6 +291,7 @@ impl From<v1::EditorConfig> for EditorConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, EnumString)]
+#[ts(use_ts_enum)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum EditorType {
@@ -424,6 +426,7 @@ impl EditorConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, EnumString)]
+#[ts(use_ts_enum)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ThemeMode {

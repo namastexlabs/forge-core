@@ -1,42 +1,42 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "properties": {
+    "additional_params": {
+      "description": "Additional parameters to append to the base command",
+      "items": {
+        "type": "string"
+      },
+      "title": "Additional Parameters",
+      "type": [
+        "array",
+        "null"
+      ]
+    },
     "append_prompt": {
-      "title": "Append Prompt",
+      "default": null,
       "description": "Extra text appended to the prompt",
+      "format": "textarea",
+      "title": "Append Prompt",
       "type": [
         "string",
-        "null"
-      ],
-      "format": "textarea",
-      "default": null
-    },
-    "dangerously_allow_all": {
-      "title": "Dangerously Allow All",
-      "description": "Allow all commands to be executed, even if they are not safe.",
-      "type": [
-        "boolean",
         "null"
       ]
     },
     "base_command_override": {
-      "title": "Base Command Override",
       "description": "Override the base command with a custom command",
+      "title": "Base Command Override",
       "type": [
         "string",
         "null"
       ]
     },
-    "additional_params": {
-      "title": "Additional Parameters",
-      "description": "Additional parameters to append to the base command",
+    "dangerously_allow_all": {
+      "description": "Allow all commands to be executed, even if they are not safe.",
+      "title": "Dangerously Allow All",
       "type": [
-        "array",
+        "boolean",
         "null"
-      ],
-      "items": {
-        "type": "string"
-      }
+      ]
     }
   },
   "type": "object"

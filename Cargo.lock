@@ -812,7 +812,7 @@ dependencies = [
  "serde_json",
  "strum_macros",
  "thiserror 2.0.17",
- "ts-rs",
+ "ts-rs 11.1.0",
  "uuid",
 ]
 
@@ -827,7 +827,7 @@ dependencies = [
  "serde",
  "tempfile",
  "thiserror 2.0.17",
- "ts-rs",
+ "ts-rs 11.1.0",
  "walkdir",
 ]
 
@@ -852,7 +852,7 @@ dependencies = [
  "strum_macros",
  "sys-locale",
  "tracing",
- "ts-rs",
+ "ts-rs 11.1.0",
  "uuid",
 ]
 
@@ -1108,7 +1108,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "utils",
  "uuid",
 ]
@@ -1459,7 +1459,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "utils",
  "uuid",
  "winsplit",
@@ -2618,7 +2618,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "utils",
  "uuid",
 ]
@@ -2688,7 +2688,7 @@ dependencies = [
  "schemars 1.1.0",
  "serde",
  "serde_json",
- "ts-rs",
+ "ts-rs 11.1.0",
 ]
 
 [[package]]
@@ -4364,7 +4364,7 @@ dependencies = [
  "tower 0.4.13",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "utils",
  "uuid",
 ]
@@ -4420,7 +4420,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "utils",
  "uuid",
  "xdg",
@@ -5358,15 +5358,37 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "ts-rs"
-version = "11.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4994acea2522cd2b3b85c1d9529a55991e3ad5e25cdcd3de9d505972c4379424"
+version = "11.0.1"
+source = "git+https://github.com/xazukx/ts-rs.git?branch=use-ts-enum#b5c8277ac9f321a0be7453eef029466152b13fc8"
 dependencies = [
  "chrono",
  "serde_json",
  "thiserror 2.0.17",
- "ts-rs-macros",
+ "ts-rs-macros 11.0.1",
  "uuid",
+]
+
+[[package]]
+name = "ts-rs"
+version = "11.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4994acea2522cd2b3b85c1d9529a55991e3ad5e25cdcd3de9d505972c4379424"
+dependencies = [
+ "serde_json",
+ "thiserror 2.0.17",
+ "ts-rs-macros 11.1.0",
+ "uuid",
+]
+
+[[package]]
+name = "ts-rs-macros"
+version = "11.0.1"
+source = "git+https://github.com/xazukx/ts-rs.git?branch=use-ts-enum#b5c8277ac9f321a0be7453eef029466152b13fc8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+ "termcolor",
 ]
 
 [[package]]
@@ -5563,7 +5585,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
+ "ts-rs 11.0.1",
  "uuid",
  "which",
  "windows-sys 0.61.2",
