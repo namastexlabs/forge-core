@@ -22,6 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate workspace configuration
+        run: |
+          echo "Checking workspace.package section..."
+          if ! grep -q '^\[workspace\.package\]' Cargo.toml; then
+            echo "❌ Missing [workspace.package] in Cargo.toml"
+            echo "This is required because forge-core crates use 'version.workspace = true'"
+            echo ""
+            echo "Fix: Ensure Cargo.toml has:"
+            echo "  [workspace.package]"
+            echo "  version = \"x.y.z\""
+            echo "  edition = \"2024\""
+            exit 1
+          fi
+          echo "✅ Workspace configuration valid"
+
       - name: Setup Node
         uses: ./.github/actions/setup-node
 

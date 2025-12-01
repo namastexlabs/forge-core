@@ -1,0 +1,27 @@
+#!/bin/bash
+# Pre-commit hook: Validate workspace configuration
+# This prevents commits that break workspace inheritance
+#
+# Install: cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+# Only check if Cargo.toml is being committed
+if git diff --cached --name-only | grep -q "^Cargo.toml$"; then
+    # Check the staged version, not the working tree
+    if ! git show :Cargo.toml | grep -q '^\[workspace\.package\]'; then
+        echo "❌ Missing [workspace.package] in Cargo.toml"
+        echo ""
+        echo "This is required because forge-core crates use 'version.workspace = true'"
+        echo ""
+        echo "Fix: Ensure Cargo.toml has:"
+        echo "  [workspace.package]"
+        echo "  version = \"x.y.z\""
+        echo "  edition = \"2024\""
+        echo ""
+        echo "If rebasing from dev, run: git checkout origin/dev -- Cargo.toml"
+        exit 1
+    fi
+fi
+
+exit 0
