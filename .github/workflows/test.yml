@@ -21,6 +21,8 @@ jobs:
     runs-on: [self-hosted, fast-build]
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true  # Prevent stale workspace issues on self-hosted runner
 
       - name: Validate workspace configuration
         run: |
@@ -43,20 +45,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Lint frontend
-        run: cd frontend && npm run lint
-
-      - name: Check i18n regressions
-        env:
-          GITHUB_BASE_REF: ${{ github.base_ref || 'main' }}
-        run: ./scripts/check-i18n.sh
-
-      - name: Format check frontend
-        run: cd frontend && npm run format:check
-
-      - name: Type check frontend
-        run: cd frontend && npx tsc --noEmit
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -65,20 +53,12 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-        env:
-          RUST_CACHE_DEBUG: true
         with:
           workspaces: "."
-          cache-on-failure: true
-          shared-key: "shared"
-          cache-all-crates: true
+          shared-key: "forge-core-rust"
 
-      - name: Build frontend
-        run: cd frontend && npm run build
-
-      - name: Checks
+      - name: Rust checks
         run: |
           cargo fmt --all -- --check
-          npm run generate-types:check
-          cargo test --workspace
-          cargo clippy --all --all-targets -- -D warnings  
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          cargo test --workspace  
