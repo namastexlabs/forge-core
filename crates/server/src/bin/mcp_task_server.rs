@@ -1,4 +1,5 @@
 use rmcp::{ServiceExt, transport::stdio};
+use server::mcp::belt::BeltServer;
 use server::mcp::task_server::TaskServer;
 use tracing_subscriber::{EnvFilter, prelude::*};
 use utils::{
@@ -23,7 +24,13 @@ fn main() -> anyhow::Result<()> {
                 .init();
 
             let version = env!("CARGO_PKG_VERSION");
-            tracing::debug!("[MCP] Starting MCP task server version {version}...");
+            let use_advanced = std::env::var("FORGE_MCP_ADVANCED").is_ok();
+
+            if use_advanced {
+                tracing::info!("[MCP] Starting MCP task server (ADVANCED mode) version {version}...");
+            } else {
+                tracing::info!("[MCP] Starting MCP task server (Belt mode) version {version}...");
+            }
 
             // Read backend port from port file or environment variable
             let base_url = if let Ok(url) = std::env::var("FORGE_BACKEND_URL") {
@@ -52,15 +59,29 @@ fn main() -> anyhow::Result<()> {
                 url
             };
 
-            let service = TaskServer::new(&base_url)
-                .serve(stdio())
-                .await
-                .map_err(|e| {
-                    tracing::error!("serving error: {:?}", e);
-                    e
-                })?;
+            // Use Belt tools by default, TaskServer (advanced) when FORGE_MCP_ADVANCED is set
+            if use_advanced {
+                tracing::info!("[MCP] Using advanced tools (7 tools)");
+                let service = TaskServer::new(&base_url)
+                    .serve(stdio())
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("serving error: {:?}", e);
+                        e
+                    })?;
+                service.waiting().await?;
+            } else {
+                tracing::info!("[MCP] Using Belt tools (15 core tools)");
+                let service = BeltServer::new(&base_url)
+                    .serve(stdio())
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("serving error: {:?}", e);
+                        e
+                    })?;
+                service.waiting().await?;
+            }
 
-            service.waiting().await?;
             Ok(())
         })
 }

@@ -99,9 +99,9 @@ impl AppServerClient {
             request_id: self.next_request_id(),
             params: ResumeConversationParams {
                 path: Some(rollout_path),
+                overrides: Some(overrides),
                 conversation_id: None,
                 history: None,
-                overrides: Some(overrides),
             },
         };
         self.send_request(request, "resumeConversation").await
@@ -211,22 +211,12 @@ impl AppServerClient {
                 }
                 Ok(())
             }
-            // v0.63.0 v2 API approval requests - handle with auto-approve for now
-            ServerRequest::CommandExecutionRequestApproval { request_id, .. } => {
-                tracing::debug!("v2 CommandExecutionRequestApproval - auto-approving");
-                let response = codex_app_server_protocol::CommandExecutionRequestApprovalResponse {
-                    decision: codex_app_server_protocol::ApprovalDecision::Accept,
-                    accept_settings: None,
-                };
-                send_server_response(peer, request_id, response).await?;
+            ServerRequest::CommandExecutionRequestApproval { .. } => {
+                tracing::warn!("Received CommandExecutionRequestApproval - not yet implemented");
                 Ok(())
             }
-            ServerRequest::FileChangeRequestApproval { request_id, .. } => {
-                tracing::debug!("v2 FileChangeRequestApproval - auto-approving");
-                let response = codex_app_server_protocol::FileChangeRequestApprovalResponse {
-                    decision: codex_app_server_protocol::ApprovalDecision::Accept,
-                };
-                send_server_response(peer, request_id, response).await?;
+            ServerRequest::FileChangeRequestApproval { .. } => {
+                tracing::warn!("Received FileChangeRequestApproval - not yet implemented");
                 Ok(())
             }
         }
