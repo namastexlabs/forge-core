@@ -410,7 +410,7 @@ impl BeltServer {
     /// Get default branch for a project
     async fn get_default_branch(&self, project_id: Uuid) -> Result<String, BeltError> {
         let url = self.url(&format!("/api/projects/{}", project_id));
-        let project: Project = self.send_json(self.client.get(&url)).await?;
+        let _project: Project = self.send_json(self.client.get(&url)).await?;
 
         // Try to get the default branch from git
         // For now, default to "main"
@@ -427,7 +427,7 @@ impl BeltServer {
     #[tool(description = "Forge global configuration and discovery. Get config, list executors, manage MCP servers. Actions: 'config' (default), 'executors', 'mcp_servers'")]
     async fn forge(
         &self,
-        Parameters(ForgeRequest { action, key, value }): Parameters<ForgeRequest>,
+        Parameters(ForgeRequest { action, key: _key, value: _value }): Parameters<ForgeRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let action = action.as_deref().unwrap_or("config");
 
@@ -472,7 +472,7 @@ impl BeltServer {
             "mcp_servers" => {
                 // Get MCP servers for an executor
                 let url = self.url("/api/config");
-                let config: serde_json::Value = match self.send_json(self.client.get(&url)).await {
+                let _config: serde_json::Value = match self.send_json(self.client.get(&url)).await {
                     Ok(c) => c,
                     Err(e) => return Self::error(e),
                 };
@@ -965,7 +965,7 @@ impl BeltServer {
     #[tool(description = "List attempts for a task. Shows running and completed attempts.")]
     async fn attempts(
         &self,
-        Parameters(AttemptsRequest { task, all }): Parameters<AttemptsRequest>,
+        Parameters(AttemptsRequest { task, all: _all }): Parameters<AttemptsRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let task_id = match self.resolve_task(&task, None).await {
             Ok(id) => id,
@@ -1024,6 +1024,7 @@ impl BeltServer {
 
         #[derive(serde::Deserialize)]
         struct ExecutionProcess {
+            #[allow(dead_code)]
             id: Uuid,
             logs: Option<serde_json::Value>,
         }
@@ -1101,7 +1102,7 @@ impl BeltServer {
     #[tool(description = "Send a follow-up message to a running attempt. Continue the conversation.")]
     async fn continue_attempt(
         &self,
-        Parameters(ContinueRequest { attempt, message, variant }): Parameters<ContinueRequest>,
+        Parameters(ContinueRequest { attempt, message, variant: _variant }): Parameters<ContinueRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let attempt_id = match Uuid::parse_str(&attempt) {
             Ok(uuid) => uuid,
