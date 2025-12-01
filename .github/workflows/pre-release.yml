@@ -485,3 +485,20 @@ jobs:
           files: |
             vibe-kanban-${{ needs.bump-version.outputs.new_tag }}.zip
             npx-cli/vibe-kanban-*.tgz
+
+  notify-automagik-forge:
+    needs: [bump-version, create-prerelease]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Trigger automagik-forge sync
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          repository: namastexlabs/automagik-forge
+          event-type: forge-core-tag-created
+          client-payload: |
+            {
+              "tag": "${{ needs.bump-version.outputs.new_tag }}",
+              "version": "${{ needs.bump-version.outputs.new_version }}"
+            }
