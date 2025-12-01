@@ -17,6 +17,13 @@
 
 pub mod types;
 
+use std::{
+    cmp::Ordering,
+    future::Future,
+    str::FromStr,
+    sync::{Arc, RwLock},
+};
+
 use db::models::{
     project::Project,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus},
@@ -25,27 +32,21 @@ use db::models::{
 use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
-    handler::server::{
-        tool::ToolRouter,
-        wrapper::Parameters,
-    },
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, ProtocolVersion,
         ServerCapabilities, ServerInfo,
     },
-    schemars, tool, tool_handler, tool_router,
+    schemars,
     service::RequestContext,
+    tool, tool_handler, tool_router,
 };
-use std::cmp::Ordering;
-use std::future::Future;
-use std::sync::{Arc, RwLock};
 use serde::Deserialize;
 use serde_json;
-use std::str::FromStr;
+use types::*;
 use uuid::Uuid;
 
 use crate::routes::task_attempts::CreateTaskAttemptBody;
-use types::*;
 
 // =============================================================================
 // REQUEST TYPES
@@ -67,7 +68,9 @@ pub struct ForgeRequest {
 pub struct ProjectRequest {
     #[schemars(description = "Project name or ID")]
     pub name: String,
-    #[schemars(description = "Action: 'get' (default), 'create', 'update', 'delete', 'branches', 'open'")]
+    #[schemars(
+        description = "Action: 'get' (default), 'create', 'update', 'delete', 'branches', 'open'"
+    )]
     pub action: Option<String>,
     #[schemars(description = "Path to git repository (for create)")]
     pub path: Option<String>,
@@ -78,7 +81,9 @@ pub struct ProjectRequest {
 pub struct TasksRequest {
     #[schemars(description = "Project name or ID (uses default if not specified)")]
     pub project: Option<String>,
-    #[schemars(description = "Status filter: 'todo', 'in-progress', 'in-review', 'done', 'cancelled'")]
+    #[schemars(
+        description = "Status filter: 'todo', 'in-progress', 'in-review', 'done', 'cancelled'"
+    )]
     pub status: Option<String>,
     #[schemars(description = "Maximum number of tasks (default: 50)")]
     pub limit: Option<u32>,
@@ -89,17 +94,23 @@ pub struct TasksRequest {
 pub struct TaskRequest {
     #[schemars(description = "Task title/description for create, or task ID/title to find")]
     pub title: String,
-    #[schemars(description = "Action: 'get' (default), 'create', 'update', 'delete', 'start' (create+start)")]
+    #[schemars(
+        description = "Action: 'get' (default), 'create', 'update', 'delete', 'start' (create+start)"
+    )]
     pub action: Option<String>,
     #[schemars(description = "Project name or ID")]
     pub project: Option<String>,
-    #[schemars(description = "Executor: 'CLAUDE_CODE', 'CODEX', 'GEMINI', 'CURSOR_AGENT', 'OPENCODE'")]
+    #[schemars(
+        description = "Executor: 'CLAUDE_CODE', 'CODEX', 'GEMINI', 'CURSOR_AGENT', 'OPENCODE'"
+    )]
     pub executor: Option<String>,
     #[schemars(description = "Base branch for the attempt (defaults to project default)")]
     pub branch: Option<String>,
     #[schemars(description = "Task description (for create)")]
     pub description: Option<String>,
-    #[schemars(description = "New status (for update): 'todo', 'in-progress', 'in-review', 'done', 'cancelled'")]
+    #[schemars(
+        description = "New status (for update): 'todo', 'in-progress', 'in-review', 'done', 'cancelled'"
+    )]
     pub status: Option<String>,
 }
 
@@ -117,7 +128,9 @@ pub struct AttemptsRequest {
 pub struct AttemptRequest {
     #[schemars(description = "Attempt ID")]
     pub id: String,
-    #[schemars(description = "Include full conversation history (default: false, only last response)")]
+    #[schemars(
+        description = "Include full conversation history (default: false, only last response)"
+    )]
     pub history: Option<bool>,
 }
 
@@ -183,10 +196,8 @@ pub struct PrRequest {
 // BELT TOOLS IMPLEMENTATION
 // =============================================================================
 
-const SUPPORTED_PROTOCOL_VERSIONS: [ProtocolVersion; 2] = [
-    ProtocolVersion::V_2025_03_26,
-    ProtocolVersion::V_2024_11_05,
-];
+const SUPPORTED_PROTOCOL_VERSIONS: [ProtocolVersion; 2] =
+    [ProtocolVersion::V_2025_03_26, ProtocolVersion::V_2024_11_05];
 
 /// Belt tools server - the core 15 tools for Forge MCP
 #[derive(Debug, Clone)]
@@ -265,7 +276,7 @@ impl BeltServer {
                                 .map(|v| v.to_string())
                                 .collect::<Vec<_>>(),
                         })),
-                    ))
+                    ));
                 }
             }
         }
@@ -342,7 +353,10 @@ impl BeltServer {
         })?;
 
         if !resp.status().is_success() {
-            return Err(BeltError::new(format!("Forge API error: {}", resp.status())));
+            return Err(BeltError::new(format!(
+                "Forge API error: {}",
+                resp.status()
+            )));
         }
 
         let api_response: ApiResponse<T> = resp.json().await.map_err(|e| {
@@ -351,7 +365,9 @@ impl BeltServer {
 
         if !api_response.success {
             return Err(BeltError::new(
-                api_response.message.unwrap_or_else(|| "Unknown error".to_string()),
+                api_response
+                    .message
+                    .unwrap_or_else(|| "Unknown error".to_string()),
             ));
         }
 
@@ -376,13 +392,18 @@ impl BeltServer {
             .find(|p| p.name.eq_ignore_ascii_case(name_or_id))
             .map(|p| p.id)
             .ok_or_else(|| {
-                BeltError::new(format!("Project not found: {}", name_or_id))
-                    .with_suggestions(vec!["Call projects() to list available projects".to_string()])
+                BeltError::new(format!("Project not found: {}", name_or_id)).with_suggestions(vec![
+                    "Call projects() to list available projects".to_string(),
+                ])
             })
     }
 
     /// Resolve a task title or ID to a UUID
-    async fn resolve_task(&self, title_or_id: &str, project_id: Option<Uuid>) -> Result<Uuid, BeltError> {
+    async fn resolve_task(
+        &self,
+        title_or_id: &str,
+        project_id: Option<Uuid>,
+    ) -> Result<Uuid, BeltError> {
         // Try parsing as UUID first
         if let Ok(uuid) = Uuid::parse_str(title_or_id) {
             return Ok(uuid);
@@ -421,10 +442,16 @@ impl BeltServer {
     // LEVEL 0: FORGE (Global Configuration)
     // =========================================================================
 
-    #[tool(description = "Forge global configuration and discovery. Get config, list executors, manage MCP servers. Actions: 'config' (default), 'executors', 'mcp_servers'")]
+    #[tool(
+        description = "Forge global configuration and discovery. Get config, list executors, manage MCP servers. Actions: 'config' (default), 'executors', 'mcp_servers'"
+    )]
     async fn forge(
         &self,
-        Parameters(ForgeRequest { action, key: _key, value: _value }): Parameters<ForgeRequest>,
+        Parameters(ForgeRequest {
+            action,
+            key: _key,
+            value: _value,
+        }): Parameters<ForgeRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let action = action.as_deref().unwrap_or("config");
 
@@ -533,7 +560,9 @@ impl BeltServer {
         })
     }
 
-    #[tool(description = "Get, create, update, or delete a project. Actions: 'get' (default), 'create', 'update', 'delete', 'branches', 'open'")]
+    #[tool(
+        description = "Get, create, update, or delete a project. Actions: 'get' (default), 'create', 'update', 'delete', 'branches', 'open'"
+    )]
     async fn project(
         &self,
         Parameters(ProjectRequest { name, action, path }): Parameters<ProjectRequest>,
@@ -544,7 +573,9 @@ impl BeltServer {
             "create" => {
                 let path = match path {
                     Some(p) => p,
-                    None => return Self::error(BeltError::new("Path is required for create action")),
+                    None => {
+                        return Self::error(BeltError::new("Path is required for create action"));
+                    }
                 };
 
                 #[derive(serde::Serialize)]
@@ -579,9 +610,10 @@ impl BeltServer {
                     }),
                     branches: None,
                     message: Some("Project created successfully".to_string()),
-                    next_steps: vec![
-                        format!("task(title='...', project='{}', action='start') - Create and start a task", project.id),
-                    ],
+                    next_steps: vec![format!(
+                        "task(title='...', project='{}', action='start') - Create and start a task",
+                        project.id
+                    )],
                 })
             }
             "delete" => {
@@ -591,7 +623,10 @@ impl BeltServer {
                 };
 
                 let url = self.url(&format!("/api/projects/{}", project_id));
-                match self.send_json::<serde_json::Value>(self.client.delete(&url)).await {
+                match self
+                    .send_json::<serde_json::Value>(self.client.delete(&url))
+                    .await
+                {
                     Ok(_) => {}
                     Err(e) => return Self::error(e),
                 };
@@ -621,9 +656,10 @@ impl BeltServer {
                     project: None,
                     branches: Some(branches),
                     message: None,
-                    next_steps: vec![
-                        format!("task(title='...', project='{}', branch='<branch>', action='start')", project_id),
-                    ],
+                    next_steps: vec![format!(
+                        "task(title='...', project='{}', branch='<branch>', action='start')",
+                        project_id
+                    )],
                 })
             }
             _ => {
@@ -655,7 +691,10 @@ impl BeltServer {
                     message: None,
                     next_steps: vec![
                         format!("tasks(project='{}') - List tasks", project.name),
-                        format!("project(name='{}', action='branches') - List branches", project.name),
+                        format!(
+                            "project(name='{}', action='branches') - List branches",
+                            project.name
+                        ),
                     ],
                 })
             }
@@ -669,7 +708,11 @@ impl BeltServer {
     #[tool(description = "List tasks in a project with optional status filter.")]
     async fn tasks(
         &self,
-        Parameters(TasksRequest { project, status, limit }): Parameters<TasksRequest>,
+        Parameters(TasksRequest {
+            project,
+            status,
+            limit,
+        }): Parameters<TasksRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         // Resolve project if provided
         let project_id = match project {
@@ -685,10 +728,11 @@ impl BeltServer {
             None => self.url("/api/tasks"),
         };
 
-        let all_tasks: Vec<TaskWithAttemptStatus> = match self.send_json(self.client.get(&url)).await {
-            Ok(t) => t,
-            Err(e) => return Self::error(e),
-        };
+        let all_tasks: Vec<TaskWithAttemptStatus> =
+            match self.send_json(self.client.get(&url)).await {
+                Ok(t) => t,
+                Err(e) => return Self::error(e),
+            };
 
         // Filter by status
         let status_filter = status.as_ref().and_then(|s| TaskStatus::from_str(s).ok());
@@ -718,12 +762,15 @@ impl BeltServer {
             },
             next_steps: vec![
                 "task(title='<id>', action='get') - Get task details".to_string(),
-                "task(title='New task', action='start', project='...') - Create and start".to_string(),
+                "task(title='New task', action='start', project='...') - Create and start"
+                    .to_string(),
             ],
         })
     }
 
-    #[tool(description = "Create, get, update, delete, or START a task. The 'start' action creates AND starts an attempt in one call - the PRIMARY entry point for work.")]
+    #[tool(
+        description = "Create, get, update, delete, or START a task. The 'start' action creates AND starts an attempt in one call - the PRIMARY entry point for work."
+    )]
     async fn task(
         &self,
         Parameters(TaskRequest {
@@ -746,31 +793,43 @@ impl BeltServer {
                         Ok(id) => id,
                         Err(e) => return Self::error(e),
                     },
-                    None => return Self::error(BeltError::new("Project is required for create/start action")),
+                    None => {
+                        return Self::error(BeltError::new(
+                            "Project is required for create/start action",
+                        ));
+                    }
                 };
 
                 // Create the task
                 let url = self.url("/api/tasks");
-                let task: Task = match self
-                    .send_json(
-                        self.client.post(&url).json(&CreateTask::from_title_description(
-                            project_id,
-                            title.clone(),
-                            description,
-                        )),
-                    )
-                    .await
-                {
-                    Ok(t) => t,
-                    Err(e) => return Self::error(e),
-                };
+                let task: Task =
+                    match self
+                        .send_json(self.client.post(&url).json(
+                            &CreateTask::from_title_description(
+                                project_id,
+                                title.clone(),
+                                description,
+                            ),
+                        ))
+                        .await
+                    {
+                        Ok(t) => t,
+                        Err(e) => return Self::error(e),
+                    };
 
                 if action == "start" {
                     // Also start an attempt
                     let executor_str = executor.as_deref().unwrap_or("CLAUDE_CODE");
-                    let base_executor = match BaseCodingAgent::from_str(&executor_str.replace('-', "_").to_ascii_uppercase()) {
+                    let base_executor = match BaseCodingAgent::from_str(
+                        &executor_str.replace('-', "_").to_ascii_uppercase(),
+                    ) {
                         Ok(e) => e,
-                        Err(_) => return Self::error(BeltError::new(format!("Unknown executor: {}", executor_str))),
+                        Err(_) => {
+                            return Self::error(BeltError::new(format!(
+                                "Unknown executor: {}",
+                                executor_str
+                            )));
+                        }
                     };
 
                     let base_branch = match branch {
@@ -792,7 +851,10 @@ impl BeltServer {
                     };
 
                     let attempt_url = self.url("/api/task-attempts");
-                    let attempt: TaskAttempt = match self.send_json(self.client.post(&attempt_url).json(&payload)).await {
+                    let attempt: TaskAttempt = match self
+                        .send_json(self.client.post(&attempt_url).json(&payload))
+                        .await
+                    {
                         Ok(a) => a,
                         Err(e) => return Self::error(e),
                     };
@@ -818,8 +880,14 @@ impl BeltServer {
                         }),
                         message: Some("Task created and attempt started".to_string()),
                         next_steps: vec![
-                            format!("attempt(id='{}') - Check progress and get last response", attempt.id),
-                            format!("continue(attempt='{}', message='...') - Send follow-up", attempt.id),
+                            format!(
+                                "attempt(id='{}') - Check progress and get last response",
+                                attempt.id
+                            ),
+                            format!(
+                                "continue(attempt='{}', message='...') - Send follow-up",
+                                attempt.id
+                            ),
                             format!("stop(attempt='{}') - Stop the attempt", attempt.id),
                         ],
                     });
@@ -838,9 +906,10 @@ impl BeltServer {
                     }),
                     attempt: None,
                     message: Some("Task created".to_string()),
-                    next_steps: vec![
-                        format!("task(title='{}', action='start') - Start working on task", task.id),
-                    ],
+                    next_steps: vec![format!(
+                        "task(title='{}', action='start') - Start working on task",
+                        task.id
+                    )],
                 })
             }
             "update" => {
@@ -902,7 +971,10 @@ impl BeltServer {
                 };
 
                 let url = self.url(&format!("/api/tasks/{}", task_id));
-                match self.send_json::<serde_json::Value>(self.client.delete(&url)).await {
+                match self
+                    .send_json::<serde_json::Value>(self.client.delete(&url))
+                    .await
+                {
                     Ok(_) => {}
                     Err(e) => return Self::error(e),
                 };
@@ -948,7 +1020,10 @@ impl BeltServer {
                     message: None,
                     next_steps: vec![
                         format!("attempts(task='{}') - List attempts", task.id),
-                        format!("task(title='{}', action='start') - Start new attempt", task.title),
+                        format!(
+                            "task(title='{}', action='start') - Start new attempt",
+                            task.title
+                        ),
                     ],
                 })
             }
@@ -999,7 +1074,9 @@ impl BeltServer {
         })
     }
 
-    #[tool(description = "Get attempt details including last response or full history. This is how you see what the executor produced.")]
+    #[tool(
+        description = "Get attempt details including last response or full history. This is how you see what the executor produced."
+    )]
     async fn attempt(
         &self,
         Parameters(AttemptRequest { id, history }): Parameters<AttemptRequest>,
@@ -1017,7 +1094,10 @@ impl BeltServer {
         };
 
         // Get processes for this attempt to extract conversation
-        let processes_url = self.url(&format!("/api/execution-processes?attempt_id={}", attempt_id));
+        let processes_url = self.url(&format!(
+            "/api/execution-processes?attempt_id={}",
+            attempt_id
+        ));
 
         #[derive(serde::Deserialize)]
         struct ExecutionProcess {
@@ -1026,13 +1106,14 @@ impl BeltServer {
             logs: Option<serde_json::Value>,
         }
 
-        let processes: Vec<ExecutionProcess> = match self.send_json(self.client.get(&processes_url)).await {
-            Ok(p) => p,
-            Err(e) => {
-                tracing::warn!("Could not fetch execution processes: {}", e.error);
-                vec![] // No processes yet
-            }
-        };
+        let processes: Vec<ExecutionProcess> =
+            match self.send_json(self.client.get(&processes_url)).await {
+                Ok(p) => p,
+                Err(e) => {
+                    tracing::warn!("Could not fetch execution processes: {}", e.error);
+                    vec![] // No processes yet
+                }
+            };
 
         // Extract last response from processes
         let last_response = processes.last().and_then(|p| {
@@ -1057,7 +1138,10 @@ impl BeltServer {
                 if let Some(logs) = &process.logs {
                     if let Some(messages) = logs.get("messages").and_then(|m| m.as_array()) {
                         for msg in messages {
-                            let role = msg.get("role").and_then(|r| r.as_str()).unwrap_or("unknown");
+                            let role = msg
+                                .get("role")
+                                .and_then(|r| r.as_str())
+                                .unwrap_or("unknown");
                             let content = msg.get("content").and_then(|c| c.as_str()).unwrap_or("");
                             turns.push(ConversationTurn {
                                 role: role.to_string(),
@@ -1092,17 +1176,26 @@ impl BeltServer {
             last_response,
             history: history_data,
             next_steps: vec![
-                format!("continue(attempt='{}', message='...') - Send follow-up", attempt.id),
+                format!(
+                    "continue(attempt='{}', message='...') - Send follow-up",
+                    attempt.id
+                ),
                 format!("stop(attempt='{}') - Stop the attempt", attempt.id),
                 format!("branch(attempt='{}') - Check branch status", attempt.id),
             ],
         })
     }
 
-    #[tool(description = "Send a follow-up message to a running attempt. Continue the conversation.")]
+    #[tool(
+        description = "Send a follow-up message to a running attempt. Continue the conversation."
+    )]
     async fn continue_attempt(
         &self,
-        Parameters(ContinueRequest { attempt, message, variant: _variant }): Parameters<ContinueRequest>,
+        Parameters(ContinueRequest {
+            attempt,
+            message,
+            variant: _variant,
+        }): Parameters<ContinueRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let attempt_id = match Uuid::parse_str(&attempt) {
             Ok(uuid) => uuid,
@@ -1116,12 +1209,13 @@ impl BeltServer {
         }
 
         let url = self.url(&format!("/api/task-attempts/{}/follow-up", attempt_id));
-        match self.send_json::<serde_json::Value>(
-            self.client.post(&url).json(&FollowUp {
+        match self
+            .send_json::<serde_json::Value>(self.client.post(&url).json(&FollowUp {
                 attempt_id,
                 message: message.clone(),
-            }),
-        ).await {
+            }))
+            .await
+        {
             Ok(_) => {}
             Err(e) => return Self::error(e),
         };
@@ -1130,9 +1224,7 @@ impl BeltServer {
             attempt_id,
             status: "running".to_string(),
             message: format!("Follow-up sent: {}", message),
-            next_steps: vec![
-                format!("attempt(id='{}') - Check response", attempt_id),
-            ],
+            next_steps: vec![format!("attempt(id='{}') - Check response", attempt_id)],
         })
     }
 
@@ -1147,7 +1239,10 @@ impl BeltServer {
         };
 
         let url = self.url(&format!("/api/task-attempts/{}/stop", attempt_id));
-        match self.send_json::<serde_json::Value>(self.client.post(&url)).await {
+        match self
+            .send_json::<serde_json::Value>(self.client.post(&url))
+            .await
+        {
             Ok(_) => {}
             Err(e) => return Self::error(e),
         };
@@ -1167,10 +1262,16 @@ impl BeltServer {
     // LEVEL 4: GIT & PR
     // =========================================================================
 
-    #[tool(description = "Get branch status for an attempt. Shows commits ahead/behind, conflicts.")]
+    #[tool(
+        description = "Get branch status for an attempt. Shows commits ahead/behind, conflicts."
+    )]
     async fn branch(
         &self,
-        Parameters(BranchRequest { attempt, action, target }): Parameters<BranchRequest>,
+        Parameters(BranchRequest {
+            attempt,
+            action,
+            target,
+        }): Parameters<BranchRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let attempt_id = match Uuid::parse_str(&attempt) {
             Ok(uuid) => uuid,
@@ -1183,7 +1284,11 @@ impl BeltServer {
             "change-target" => {
                 let new_target = match target {
                     Some(t) => t,
-                    None => return Self::error(BeltError::new("Target branch required for change-target")),
+                    None => {
+                        return Self::error(BeltError::new(
+                            "Target branch required for change-target",
+                        ));
+                    }
                 };
 
                 #[derive(serde::Serialize)]
@@ -1191,10 +1296,16 @@ impl BeltServer {
                     target_branch: String,
                 }
 
-                let url = self.url(&format!("/api/task-attempts/{}/change-target-branch", attempt_id));
-                match self.send_json::<serde_json::Value>(
-                    self.client.post(&url).json(&ChangeTarget { target_branch: new_target.clone() }),
-                ).await {
+                let url = self.url(&format!(
+                    "/api/task-attempts/{}/change-target-branch",
+                    attempt_id
+                ));
+                match self
+                    .send_json::<serde_json::Value>(self.client.post(&url).json(&ChangeTarget {
+                        target_branch: new_target.clone(),
+                    }))
+                    .await
+                {
                     Ok(_) => {}
                     Err(e) => return Self::error(e),
                 };
@@ -1207,7 +1318,10 @@ impl BeltServer {
                     behind: 0,
                     has_conflicts: false,
                     message: Some("Target branch changed".to_string()),
-                    next_steps: vec![format!("branch(attempt='{}') - Check branch status", attempt_id)],
+                    next_steps: vec![format!(
+                        "branch(attempt='{}') - Check branch status",
+                        attempt_id
+                    )],
                 })
             }
             _ => {
@@ -1256,7 +1370,10 @@ impl BeltServer {
         };
 
         let url = self.url(&format!("/api/task-attempts/{}/merge", attempt_id));
-        match self.send_json::<serde_json::Value>(self.client.post(&url)).await {
+        match self
+            .send_json::<serde_json::Value>(self.client.post(&url))
+            .await
+        {
             Ok(_) => {}
             Err(e) => return Self::error(e),
         };
@@ -1265,9 +1382,7 @@ impl BeltServer {
             attempt_id,
             success: true,
             message: "Branch merged successfully".to_string(),
-            next_steps: vec![
-                "tasks() - View updated tasks".to_string(),
-            ],
+            next_steps: vec!["tasks() - View updated tasks".to_string()],
         })
     }
 
@@ -1282,7 +1397,10 @@ impl BeltServer {
         };
 
         let url = self.url(&format!("/api/task-attempts/{}/push", attempt_id));
-        match self.send_json::<serde_json::Value>(self.client.post(&url)).await {
+        match self
+            .send_json::<serde_json::Value>(self.client.post(&url))
+            .await
+        {
             Ok(_) => {}
             Err(e) => return Self::error(e),
         };
@@ -1299,16 +1417,23 @@ impl BeltServer {
             success: true,
             branch: attempt.branch,
             message: "Branch pushed to GitHub".to_string(),
-            next_steps: vec![
-                format!("pr(attempt='{}', action='create') - Create pull request", attempt_id),
-            ],
+            next_steps: vec![format!(
+                "pr(attempt='{}', action='create') - Create pull request",
+                attempt_id
+            )],
         })
     }
 
     #[tool(description = "Create or attach to a GitHub pull request.")]
     async fn pr(
         &self,
-        Parameters(PrRequest { attempt, action, title, body, pr_number }): Parameters<PrRequest>,
+        Parameters(PrRequest {
+            attempt,
+            action,
+            title,
+            body,
+            pr_number,
+        }): Parameters<PrRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let attempt_id = match Uuid::parse_str(&attempt) {
             Ok(uuid) => uuid,
@@ -1330,9 +1455,12 @@ impl BeltServer {
                 }
 
                 let url = self.url(&format!("/api/task-attempts/{}/attach-pr", attempt_id));
-                match self.send_json::<serde_json::Value>(
-                    self.client.post(&url).json(&AttachPr { pr_number: pr_num }),
-                ).await {
+                match self
+                    .send_json::<serde_json::Value>(
+                        self.client.post(&url).json(&AttachPr { pr_number: pr_num }),
+                    )
+                    .await
+                {
                     Ok(_) => {}
                     Err(e) => return Self::error(e),
                 };
@@ -1361,9 +1489,10 @@ impl BeltServer {
                 }
 
                 let url = self.url(&format!("/api/task-attempts/{}/create-pr", attempt_id));
-                let response: PrResponse = match self.send_json(
-                    self.client.post(&url).json(&CreatePr { title, body }),
-                ).await {
+                let response: PrResponse = match self
+                    .send_json(self.client.post(&url).json(&CreatePr { title, body }))
+                    .await
+                {
                     Ok(r) => r,
                     Err(e) => return Self::error(e),
                 };

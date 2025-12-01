@@ -455,7 +455,11 @@ fn handle_task_archive(deployment: &DeploymentImpl, task_id: Uuid) {
                 tracing::info!("Completed worktree cleanup for archived task {}", task_id);
             }
             Err(e) => {
-                tracing::error!("Failed to cleanup worktrees for archived task {}: {}", task_id, e);
+                tracing::error!(
+                    "Failed to cleanup worktrees for archived task {}: {}",
+                    task_id,
+                    e
+                );
             }
         }
     });

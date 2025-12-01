@@ -7,7 +7,6 @@ use std::{
 use codex_app_server_protocol::{
     JSONRPCNotification, JSONRPCResponse, NewConversationResponse, ServerNotification,
 };
-use mcp_types::ContentBlock;
 use codex_protocol::{
     config_types::ReasoningEffort,
     plan_tool::{StepStatus, UpdatePlanArgs},
@@ -23,6 +22,7 @@ use codex_protocol::{
 };
 use futures::StreamExt;
 use lazy_static::lazy_static;
+use mcp_types::ContentBlock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -491,7 +491,9 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                     upsert_normalized_entry(&msg_store, index, entry, is_new);
                     state.thinking = None;
                 }
-                EventMsg::AgentReasoningSectionBreak(AgentReasoningSectionBreakEvent { .. }) => {
+                EventMsg::AgentReasoningSectionBreak(AgentReasoningSectionBreakEvent {
+                    ..
+                }) => {
                     state.assistant = None;
                     state.thinking = None;
                 }

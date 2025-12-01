@@ -1,6 +1,5 @@
 use rmcp::{ServiceExt, transport::stdio};
-use server::mcp::belt::BeltServer;
-use server::mcp::task_server::TaskServer;
+use server::mcp::{belt::BeltServer, task_server::TaskServer};
 use tracing_subscriber::{EnvFilter, prelude::*};
 use utils::{
     port_file::read_port_file,
@@ -38,7 +37,9 @@ fn main() -> anyhow::Result<()> {
             let use_advanced = std::env::var("FORGE_MCP_ADVANCED").is_ok();
 
             if use_advanced {
-                tracing::info!("[MCP] Starting MCP task server (ADVANCED mode) version {version}...");
+                tracing::info!(
+                    "[MCP] Starting MCP task server (ADVANCED mode) version {version}..."
+                );
             } else {
                 tracing::info!("[MCP] Starting MCP task server (Belt mode) version {version}...");
             }

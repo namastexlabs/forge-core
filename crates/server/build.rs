@@ -13,5 +13,4 @@ fn main() {
     if let Ok(api_endpoint) = std::env::var("GITHUB_APP_CLIENT_ID") {
         println!("cargo:rustc-env=GITHUB_APP_CLIENT_ID={}", api_endpoint);
     }
-
 }

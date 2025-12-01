@@ -210,12 +210,14 @@ impl LocalContainerService {
 
             let worktree_path_str = path.to_string_lossy().to_string();
             // Check if worktree is referenced by either TaskAttempt OR ExecutionRun
-            let task_exists = TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str)
-                .await
-                .unwrap_or(true);
-            let run_exists = ExecutionRun::container_ref_exists(&self.db().pool, &worktree_path_str)
-                .await
-                .unwrap_or(true);
+            let task_exists =
+                TaskAttempt::container_ref_exists(&self.db().pool, &worktree_path_str)
+                    .await
+                    .unwrap_or(true);
+            let run_exists =
+                ExecutionRun::container_ref_exists(&self.db().pool, &worktree_path_str)
+                    .await
+                    .unwrap_or(true);
 
             if !task_exists && !run_exists {
                 // This is an orphaned worktree - delete it
@@ -355,8 +357,13 @@ impl LocalContainerService {
             };
 
             if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
-                && let Err(e) =
-                    ExecutionProcess::update_completion(&db.pool, exec_id, status.clone(), exit_code).await
+                && let Err(e) = ExecutionProcess::update_completion(
+                    &db.pool,
+                    exec_id,
+                    status.clone(),
+                    exit_code,
+                )
+                .await
             {
                 tracing::error!("Failed to update execution process completion: {}", e);
             }
@@ -365,7 +372,10 @@ impl LocalContainerService {
             if matches!(status, ExecutionProcessStatus::Failed)
                 && let Ok(ctx) = ExecutionProcess::load_context(&db.pool, exec_id).await
                 && config.read().await.analytics_enabled == Some(true)
-                && matches!(&ctx.execution_process.run_reason, ExecutionProcessRunReason::CodingAgent)
+                && matches!(
+                    &ctx.execution_process.run_reason,
+                    ExecutionProcessRunReason::CodingAgent
+                )
                 && let Some(analytics) = &analytics
             {
                 analytics.analytics_service.track_event(
@@ -1144,7 +1154,10 @@ impl ContainerService for LocalContainerService {
     // =========================================================================
 
     /// Create a worktree for an execution run
-    async fn create_for_run(&self, execution_run: &ExecutionRun) -> Result<ContainerRef, ContainerError> {
+    async fn create_for_run(
+        &self,
+        execution_run: &ExecutionRun,
+    ) -> Result<ContainerRef, ContainerError> {
         let project = Project::find_by_id(&self.db.pool, execution_run.project_id)
             .await?
             .ok_or(sqlx::Error::RowNotFound)?;
@@ -1224,7 +1237,11 @@ impl ContainerService for LocalContainerService {
             .await;
 
         // Spawn exit monitor for execution run - simpler version without task status updates
-        let _hn = self.spawn_exit_monitor_for_run(&execution_process.id, execution_run.id, spawned.exit_signal);
+        let _hn = self.spawn_exit_monitor_for_run(
+            &execution_process.id,
+            execution_run.id,
+            spawned.exit_signal,
+        );
 
         Ok(())
     }
@@ -1287,8 +1304,13 @@ impl LocalContainerService {
             };
 
             if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
-                && let Err(e) =
-                    ExecutionProcess::update_completion(&db.pool, exec_id, status.clone(), exit_code).await
+                && let Err(e) = ExecutionProcess::update_completion(
+                    &db.pool,
+                    exec_id,
+                    status.clone(),
+                    exit_code,
+                )
+                .await
             {
                 tracing::error!("Failed to update execution process completion: {}", e);
             }
@@ -1304,12 +1326,9 @@ impl LocalContainerService {
             {
                 let worktree = PathBuf::from(container_ref);
                 if let Ok(head) = container.git().get_head_info(&worktree) {
-                    let _ = ExecutionProcess::update_after_head_commit(
-                        &db.pool,
-                        exec_id,
-                        &head.oid,
-                    )
-                    .await;
+                    let _ =
+                        ExecutionProcess::update_after_head_commit(&db.pool, exec_id, &head.oid)
+                            .await;
                 }
             }
 

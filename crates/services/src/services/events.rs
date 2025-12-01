@@ -48,9 +48,7 @@ impl EventService {
         msg_store: Arc<MsgStore>,
         task_id: Uuid,
     ) -> Result<(), SqlxError> {
-        if let Some(task_with_status) =
-            Task::find_by_id_with_attempt_status(pool, task_id).await?
-        {
+        if let Some(task_with_status) = Task::find_by_id_with_attempt_status(pool, task_id).await? {
             msg_store.push_patch(task_patch::replace(&task_with_status));
         }
 

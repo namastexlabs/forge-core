@@ -7,11 +7,11 @@ use uuid::Uuid;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct ExecutorSession {
     pub id: Uuid,
-    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
+    pub task_attempt_id: Option<Uuid>, // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
-    pub session_id: Option<String>,     // External session ID from Claude/Amp
-    pub prompt: Option<String>,         // The prompt sent to the executor
-    pub summary: Option<String>,        // Final assistant message/summary
+    pub session_id: Option<String>, // External session ID from Claude/Amp
+    pub prompt: Option<String>,     // The prompt sent to the executor
+    pub summary: Option<String>,    // Final assistant message/summary
     pub commit_message: Option<String>, // Generated conventional commit message
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -19,7 +19,7 @@ pub struct ExecutorSession {
 
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateExecutorSession {
-    pub task_attempt_id: Option<Uuid>,  // Nullable: ExecutionRun doesn't have TaskAttempt
+    pub task_attempt_id: Option<Uuid>, // Nullable: ExecutionRun doesn't have TaskAttempt
     pub execution_process_id: Uuid,
     pub prompt: Option<String>,
 }

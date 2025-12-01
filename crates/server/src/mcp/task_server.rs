@@ -14,16 +14,14 @@ use db::models::{
 use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
-    handler::server::{
-        tool::ToolRouter,
-        wrapper::Parameters,
-    },
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, ProtocolVersion,
         ServerCapabilities, ServerInfo,
     },
-    schemars, tool, tool_handler, tool_router,
+    schemars,
     service::RequestContext,
+    tool, tool_handler, tool_router,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json;
@@ -32,10 +30,8 @@ use uuid::Uuid;
 
 use crate::routes::task_attempts::CreateTaskAttemptBody;
 
-const SUPPORTED_PROTOCOL_VERSIONS: [ProtocolVersion; 2] = [
-    ProtocolVersion::V_2025_03_26,
-    ProtocolVersion::V_2024_11_05,
-];
+const SUPPORTED_PROTOCOL_VERSIONS: [ProtocolVersion; 2] =
+    [ProtocolVersion::V_2025_03_26, ProtocolVersion::V_2024_11_05];
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct CreateTaskRequest {
@@ -386,10 +382,7 @@ impl TaskServer {
         }
     }
 
-    fn log_downgrade_if_needed(
-        requested: &ProtocolVersion,
-        negotiated: &ProtocolVersion,
-    ) {
+    fn log_downgrade_if_needed(requested: &ProtocolVersion, negotiated: &ProtocolVersion) {
         let latest = Self::latest_supported_protocol();
         if negotiated != &latest {
             info!(
@@ -422,7 +415,7 @@ impl TaskServer {
                                 .map(|v| v.to_string())
                                 .collect::<Vec<_>>(),
                         })),
-                    ))
+                    ));
                 }
             }
         }
@@ -752,8 +745,9 @@ impl ServerHandler for TaskServer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rmcp::model::ErrorCode;
+
+    use super::*;
 
     fn custom_protocol_version(version: &str) -> ProtocolVersion {
         serde_json::from_str::<ProtocolVersion>(&format!("\"{version}\"")).unwrap()

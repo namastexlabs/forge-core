@@ -148,7 +148,7 @@ impl PrMonitorService {
                 {
                     // Check if this is the first PR merge (count merged PRs before this one)
                     let merged_count_before = sqlx::query_scalar::<_, i64>(
-                        "SELECT COUNT(*) FROM merges WHERE pr_status = 'merged' AND id != $1"
+                        "SELECT COUNT(*) FROM merges WHERE pr_status = 'merged' AND id != $1",
                     )
                     .bind(pr_merge.id)
                     .fetch_one(&self.db.pool)

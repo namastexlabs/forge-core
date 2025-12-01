@@ -216,10 +216,7 @@ impl ExecutionRun {
     }
 
     /// Mark worktree as deleted
-    pub async fn mark_worktree_deleted(
-        pool: &SqlitePool,
-        run_id: Uuid,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn mark_worktree_deleted(pool: &SqlitePool, run_id: Uuid) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "UPDATE execution_runs SET worktree_deleted = TRUE, updated_at = datetime('now', 'subsec') WHERE id = ?",
             run_id
