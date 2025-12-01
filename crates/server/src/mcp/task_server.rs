@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering,
-    future::Future,
     path::PathBuf,
     str::FromStr,
     sync::{Arc, RwLock},
@@ -712,27 +711,25 @@ impl TaskServer {
 
 #[tool_handler]
 impl ServerHandler for TaskServer {
-    fn initialize(
+    async fn initialize(
         &self,
         request: InitializeRequestParam,
         context: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ServerInfo, ErrorData>> + Send + '_ {
-        async move {
-            if context.peer.peer_info().is_none() {
-                context.peer.set_peer_info(request.clone());
-            }
-
-            let requested_version = request.protocol_version.clone();
-            let negotiated_version = match Self::negotiate_protocol_version(&requested_version) {
-                Ok(version) => version,
-                Err(error) => return Err(error),
-            };
-
-            Self::log_downgrade_if_needed(&requested_version, &negotiated_version);
-            self.set_negotiated_protocol_version(negotiated_version.clone());
-
-            Ok(self.server_info_for_version(negotiated_version))
+    ) -> Result<ServerInfo, ErrorData> {
+        if context.peer.peer_info().is_none() {
+            context.peer.set_peer_info(request.clone());
         }
+
+        let requested_version = request.protocol_version.clone();
+        let negotiated_version = match Self::negotiate_protocol_version(&requested_version) {
+            Ok(version) => version,
+            Err(error) => return Err(error),
+        };
+
+        Self::log_downgrade_if_needed(&requested_version, &negotiated_version);
+        self.set_negotiated_protocol_version(negotiated_version.clone());
+
+        Ok(self.server_info_for_version(negotiated_version))
     }
 
     /// Returns server info that reflects the currently negotiated protocol version so

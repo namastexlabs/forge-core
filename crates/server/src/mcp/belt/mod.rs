@@ -19,7 +19,6 @@ pub mod types;
 
 use std::{
     cmp::Ordering,
-    future::Future,
     str::FromStr,
     sync::{Arc, RwLock},
 };
@@ -740,7 +739,7 @@ impl BeltServer {
         let limit = limit.unwrap_or(50) as usize;
         let filtered: Vec<_> = all_tasks
             .into_iter()
-            .filter(|t| status_filter.as_ref().map_or(true, |s| &t.status == s))
+            .filter(|t| status_filter.as_ref().is_none_or(|s| &t.status == s))
             .take(limit)
             .map(|t| TaskSummary {
                 id: t.id,
@@ -757,7 +756,7 @@ impl BeltServer {
             count,
             project_id: project_id.unwrap_or(Uuid::nil()),
             filters: TaskFilters {
-                status: status,
+                status,
                 limit: limit as u32,
             },
             next_steps: vec![
@@ -1135,20 +1134,23 @@ impl BeltServer {
         let history_data = if history.unwrap_or(false) {
             let mut turns = vec![];
             for process in &processes {
-                if let Some(logs) = &process.logs {
-                    if let Some(messages) = logs.get("messages").and_then(|m| m.as_array()) {
-                        for msg in messages {
-                            let role = msg
-                                .get("role")
-                                .and_then(|r| r.as_str())
-                                .unwrap_or("unknown");
-                            let content = msg.get("content").and_then(|c| c.as_str()).unwrap_or("");
-                            turns.push(ConversationTurn {
-                                role: role.to_string(),
-                                content: content.to_string(),
-                                timestamp: None,
-                            });
-                        }
+                if let Some(messages) = process
+                    .logs
+                    .as_ref()
+                    .and_then(|logs| logs.get("messages"))
+                    .and_then(|m| m.as_array())
+                {
+                    for msg in messages {
+                        let role = msg
+                            .get("role")
+                            .and_then(|r| r.as_str())
+                            .unwrap_or("unknown");
+                        let content = msg.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                        turns.push(ConversationTurn {
+                            role: role.to_string(),
+                            content: content.to_string(),
+                            timestamp: None,
+                        });
                     }
                 }
             }
@@ -1516,26 +1518,24 @@ impl BeltServer {
 
 #[tool_handler]
 impl ServerHandler for BeltServer {
-    fn initialize(
+    async fn initialize(
         &self,
         request: InitializeRequestParam,
         context: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ServerInfo, ErrorData>> + Send + '_ {
-        async move {
-            if context.peer.peer_info().is_none() {
-                context.peer.set_peer_info(request.clone());
-            }
-
-            let requested_version = request.protocol_version.clone();
-            let negotiated_version = match Self::negotiate_protocol_version(&requested_version) {
-                Ok(version) => version,
-                Err(error) => return Err(error),
-            };
-
-            self.set_negotiated_protocol_version(negotiated_version.clone());
-
-            Ok(self.server_info_for_version(negotiated_version))
+    ) -> Result<ServerInfo, ErrorData> {
+        if context.peer.peer_info().is_none() {
+            context.peer.set_peer_info(request.clone());
         }
+
+        let requested_version = request.protocol_version.clone();
+        let negotiated_version = match Self::negotiate_protocol_version(&requested_version) {
+            Ok(version) => version,
+            Err(error) => return Err(error),
+        };
+
+        self.set_negotiated_protocol_version(negotiated_version.clone());
+
+        Ok(self.server_info_for_version(negotiated_version))
     }
 
     fn get_info(&self) -> ServerInfo {
