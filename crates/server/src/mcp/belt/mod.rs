@@ -408,10 +408,7 @@ impl BeltServer {
     }
 
     /// Get default branch for a project
-    async fn get_default_branch(&self, project_id: Uuid) -> Result<String, BeltError> {
-        let url = self.url(&format!("/api/projects/{}", project_id));
-        let _project: Project = self.send_json(self.client.get(&url)).await?;
-
+    async fn get_default_branch(&self, _project_id: Uuid) -> Result<String, BeltError> {
         // Try to get the default branch from git
         // For now, default to "main"
         Ok("main".to_string())
@@ -1031,7 +1028,10 @@ impl BeltServer {
 
         let processes: Vec<ExecutionProcess> = match self.send_json(self.client.get(&processes_url)).await {
             Ok(p) => p,
-            Err(_) => vec![], // No processes yet
+            Err(e) => {
+                tracing::warn!("Could not fetch execution processes: {}", e.error);
+                vec![] // No processes yet
+            }
         };
 
         // Extract last response from processes
@@ -1207,7 +1207,7 @@ impl BeltServer {
                     behind: 0,
                     has_conflicts: false,
                     message: Some("Target branch changed".to_string()),
-                    next_steps: vec![],
+                    next_steps: vec![format!("branch(attempt='{}') - Check branch status", attempt_id)],
                 })
             }
             _ => {

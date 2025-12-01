@@ -7,6 +7,17 @@ use utils::{
     sentry::{self as sentry_utils, SentrySource, sentry_layer},
 };
 
+/// Helper to serve an MCP server and wait for completion
+macro_rules! serve_and_wait {
+    ($server:expr) => {{
+        let service = $server.serve(stdio()).await.map_err(|e| {
+            tracing::error!("serving error: {:?}", e);
+            e
+        })?;
+        service.waiting().await?;
+    }};
+}
+
 fn main() -> anyhow::Result<()> {
     sentry_utils::init_once(SentrySource::Mcp);
     tokio::runtime::Builder::new_multi_thread()
@@ -62,24 +73,10 @@ fn main() -> anyhow::Result<()> {
             // Use Belt tools by default, TaskServer (advanced) when FORGE_MCP_ADVANCED is set
             if use_advanced {
                 tracing::info!("[MCP] Using advanced tools (7 tools)");
-                let service = TaskServer::new(&base_url)
-                    .serve(stdio())
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("serving error: {:?}", e);
-                        e
-                    })?;
-                service.waiting().await?;
+                serve_and_wait!(TaskServer::new(&base_url));
             } else {
                 tracing::info!("[MCP] Using Belt tools (15 core tools)");
-                let service = BeltServer::new(&base_url)
-                    .serve(stdio())
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("serving error: {:?}", e);
-                        e
-                    })?;
-                service.waiting().await?;
+                serve_and_wait!(BeltServer::new(&base_url));
             }
 
             Ok(())
