@@ -1,6 +1,6 @@
 [package]
 name = "services"
-version = "0.8.4"
+version = "0.8.5-rc.1"
 edition = "2024"
 
 [features]

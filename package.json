@@ -1,6 +1,6 @@
 {
   "name": "automagik-forge",
-  "version": "0.0.115",
+  "version": "0.8.5-rc.1",
   "private": true,
   "bin": {
     "automagik-forge": "npx-cli/bin/cli.js"
