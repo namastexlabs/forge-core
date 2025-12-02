@@ -1,6 +1,8 @@
 name: Create GitHub Pre-Release
 
 on:
+  repository_dispatch:
+    types: [trigger-pre-release]
   workflow_dispatch:
     inputs:
       version_type:
@@ -68,39 +70,55 @@ jobs:
       - name: Determine and update versions
         id: version
         run: |
-          # Get the latest version from npm registry
-          latest_npm_version=$(npm view vibe-kanban version 2>/dev/null || echo "0.0.0")
-          echo "Latest npm version: $latest_npm_version"
-
           timestamp=$(date +%Y%m%d%H%M%S)
 
-          # Update root package.json based on npm version, not current package.json
-          if [[ "${{ github.event.inputs.version_type }}" == "prerelease" ]]; then
-            # For prerelease, use current package.json version and add branch suffix
-            npm version prerelease --preid="${{ steps.branch.outputs.suffix }}" --no-git-tag-version
+          # Check if triggered by forge automation (repository_dispatch with forge_version)
+          if [[ -n "${{ github.event.client_payload.forge_version }}" ]]; then
+            echo "🔗 Triggered by forge automation"
+            echo "Using forge version: ${{ github.event.client_payload.forge_version }}"
 
-            new_version=$(node -p "require('./package.json').version")
-            new_tag="v${new_version}.${timestamp}"
+            new_version="${{ github.event.client_payload.forge_version }}"
+            new_tag="v${new_version}"
+
+            # Update all package.json files to match forge version
+            npm version "$new_version" --no-git-tag-version --allow-same-version
+            cd npx-cli
+            npm version "$new_version" --no-git-tag-version --allow-same-version
+            cd ..
+
+            # Update Cargo workspace to match forge version
+            cargo set-version --workspace "$new_version"
+
           else
-            # For regular releases, use npm version and bump it
-            npm version $latest_npm_version --no-git-tag-version --allow-same-version
-            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+            echo "🖐️ Manual trigger (workflow_dispatch)"
+            # Get the latest version from npm registry
+            latest_npm_version=$(npm view vibe-kanban version 2>/dev/null || echo "0.0.0")
+            echo "Latest npm version: $latest_npm_version"
 
-            new_version=$(node -p "require('./package.json').version")
-            new_tag="v${new_version}-${timestamp}"
+            # Update root package.json based on npm version, not current package.json
+            if [[ "${{ github.event.inputs.version_type }}" == "prerelease" ]]; then
+              # For prerelease, use current package.json version and add branch suffix
+              npm version prerelease --preid="${{ steps.branch.outputs.suffix }}" --no-git-tag-version
+
+              new_version=$(node -p "require('./package.json').version")
+              new_tag="v${new_version}.${timestamp}"
+            else
+              # For regular releases, use npm version and bump it
+              npm version $latest_npm_version --no-git-tag-version --allow-same-version
+              npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+
+              new_version=$(node -p "require('./package.json').version")
+              new_tag="v${new_version}-${timestamp}"
+            fi
+
+            # Update npx-cli package.json to match
+            cd npx-cli
+            npm version $new_version --no-git-tag-version --allow-same-version
+            cd ..
+
+            # Update Cargo workspace
+            cargo set-version --workspace "$new_version"
           fi
-
-          # Update npx-cli package.json to match
-          cd npx-cli
-          npm version $new_version --no-git-tag-version --allow-same-version
-          cd ..
-
-          # Update frontend package.json to match
-          cd frontend
-          npm version $new_version --no-git-tag-version --allow-same-version
-          cd ..
-
-          cargo set-version --workspace "$new_version"
 
           echo "New version: $new_version"
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
@@ -110,63 +128,18 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add package.json pnpm-lock.yaml npx-cli/package.json frontend/package.json Cargo.lock
+          git add package.json pnpm-lock.yaml npx-cli/package.json Cargo.lock
           git add $(find . -name Cargo.toml) 
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
           git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
           git push
           git push --tags
 
-  build-frontend:
-    needs: bump-version
-    runs-on: ubuntu-latest
-    env:
-      VITE_PUBLIC_REACT_VIRTUOSO_LICENSE_KEY: ${{ secrets.PUBLIC_REACT_VIRTUOSO_LICENSE_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.bump-version.outputs.new_tag }}
-
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Lint frontend
-        run: cd frontend && npm run lint
-
-      - name: Type check frontend
-        run: cd frontend && npx tsc --noEmit
-
-      - name: Build frontend
-        run: cd frontend && npm run build
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          VITE_POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-          VITE_POSTHOG_API_ENDPOINT: ${{ secrets.POSTHOG_API_ENDPOINT }}
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v3
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        with:
-          release: ${{ needs.bump-version.outputs.new_version }}
-          environment: production
-          sourcemaps: "./frontend/dist"
-          ignore_missing: true
-
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-          retention-days: 1
+  # Note: forge-core doesn't have a frontend - frontend build happens in automagik-forge repo
+  # build-frontend job removed - not needed for forge-core
 
   build-backend:
-    needs: [bump-version, build-frontend]
+    needs: [bump-version]
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     strategy:
@@ -352,7 +325,7 @@ jobs:
           retention-days: 1
 
   package-npx-cli:
-    needs: [bump-version, build-frontend, build-backend]
+    needs: [bump-version, build-backend]
     runs-on: ubuntu-latest
     strategy:
       # NOTE: This matrix must be kept in sync with build-backend job above
@@ -434,7 +407,7 @@ jobs:
           retention-days: 1
 
   create-prerelease:
-    needs: [bump-version, build-frontend, build-backend, package-npx-cli]
+    needs: [bump-version, build-backend, package-npx-cli]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
