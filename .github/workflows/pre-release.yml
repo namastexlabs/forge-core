@@ -202,6 +202,10 @@ jobs:
           shared-key: "shared"
           cache-all-crates: true
 
+      - name: Install musl target (Linux)
+        if: runner.os == 'Linux'
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build backend (Linux)
         if: runner.os == 'Linux'
         run: |
