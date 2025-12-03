@@ -79,7 +79,7 @@ jobs:
         run: |
           docker pull ghcr.io/namastexlabs/forge-builder:${{ steps.rust-version.outputs.version }}
           docker run --rm ghcr.io/namastexlabs/forge-builder:${{ steps.rust-version.outputs.version }} \
-            bash -c "rustc --version && node --version && pnpm --version && cargo zigbuild --version"
+            -c "rustc --version && node --version && pnpm --version && cargo zigbuild --help | head -1"
 
       - name: Image size report
         run: |
