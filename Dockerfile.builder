@@ -54,6 +54,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustc --version && cargo --version
 
 # Add common Linux targets
+# Cache-bust: 2025-12-03T03:48:00Z - Force reinstall musl stdlib
 RUN rustup target add \
     x86_64-unknown-linux-gnu \
     x86_64-unknown-linux-musl \
