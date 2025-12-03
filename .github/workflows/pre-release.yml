@@ -164,7 +164,7 @@ jobs:
         include:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            container: &forge_builder ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18
+            container: &forge_builder ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18-v2
             name: linux-x64
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
