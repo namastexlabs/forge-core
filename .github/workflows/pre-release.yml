@@ -284,6 +284,7 @@ jobs:
 
       - name: Package main binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail if binary doesn't exist (signing was skipped)
         run: zip vibe-kanban.zip vibe-kanban
 
       - name: Notarize signed binary (macOS)
@@ -310,6 +311,7 @@ jobs:
 
       - name: Package MCP binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail if binary doesn't exist (signing was skipped)
         run: zip vibe-kanban-mcp.zip vibe-kanban-mcp
 
       - name: Notarize signed MCP binary (macOS)
@@ -324,6 +326,7 @@ jobs:
 
       - name: Prepare signed binaries (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail if zip files don't exist (signing/packaging was skipped)
         run: |
           mkdir -p dist
           cp vibe-kanban.zip dist/vibe-kanban-${{ matrix.name }}.zip
