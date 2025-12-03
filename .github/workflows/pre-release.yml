@@ -272,6 +272,7 @@ jobs:
 
       - name: Sign main binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail build if Apple signing credentials not configured
         uses: indygreg/apple-code-sign-action@v1
         with:
           input_path: target/${{ matrix.target }}/release/server
@@ -297,6 +298,7 @@ jobs:
 
       - name: Sign MCP binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail build if Apple signing credentials not configured
         uses: indygreg/apple-code-sign-action@v1
         with:
           input_path: target/${{ matrix.target }}/release/mcp_task_server
