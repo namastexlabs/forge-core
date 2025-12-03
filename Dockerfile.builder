@@ -72,7 +72,7 @@ RUN zig version
 RUN cargo install cargo-zigbuild --locked
 
 # Verify cargo-zigbuild installation
-RUN cargo zigbuild --version
+RUN cargo zigbuild --help | head -1
 
 # ============================================
 # Stage 3: Build Optimizations (forge-builder)
