@@ -12,7 +12,7 @@ async-trait = "0.1"
 thiserror = { workspace = true } 
 anyhow = { workspace = true }
 tokio = { workspace = true }
-sqlx = "0.8.6"
+sqlx = { version = "0.8.6", features = ["bundled"] }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 git2 = "^0.18.1"
