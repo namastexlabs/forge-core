@@ -1,6 +1,6 @@
 [package]
 name = "db"
-version.workspace = true
+version = "0.8.6-rc.0"
 edition = "2024"
 
 [dependencies]

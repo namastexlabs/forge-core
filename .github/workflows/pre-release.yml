@@ -91,20 +91,19 @@ jobs:
 
           else
             echo "🖐️ Manual trigger (workflow_dispatch)"
-            # Get the latest version from npm registry
-            latest_npm_version=$(npm view vibe-kanban version 2>/dev/null || echo "0.0.0")
-            echo "Latest npm version: $latest_npm_version"
+            # forge-core doesn't publish to npm - use current package.json version
+            current_version=$(node -p "require('./package.json').version")
+            echo "Current version: $current_version"
 
-            # Update root package.json based on npm version, not current package.json
+            # Bump version based on current package.json
             if [[ "${{ github.event.inputs.version_type }}" == "prerelease" ]]; then
-              # For prerelease, use current package.json version and add branch suffix
-              npm version prerelease --preid="${{ steps.branch.outputs.suffix }}" --no-git-tag-version
+              # For prerelease, always use "rc" identifier (not branch name)
+              npm version prerelease --preid="rc" --no-git-tag-version
 
               new_version=$(node -p "require('./package.json').version")
               new_tag="v${new_version}.${timestamp}"
             else
-              # For regular releases, use npm version and bump it
-              npm version $latest_npm_version --no-git-tag-version --allow-same-version
+              # For regular releases, bump current version
               npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
 
               new_version=$(node -p "require('./package.json').version")
@@ -129,11 +128,27 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add package.json pnpm-lock.yaml npx-cli/package.json Cargo.lock
-          git add $(find . -name Cargo.toml) 
-          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
-          git push
-          git push --tags
+          git add $(find . -name Cargo.toml)
+
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+            git push
+          else
+            echo "No version changes to commit (already at ${{ steps.version.outputs.new_version }})"
+          fi
+
+          # Only create tag if it doesn't exist (check both local and remote)
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.version.outputs.new_tag }}$"; then
+            echo "Tag ${{ steps.version.outputs.new_tag }} already exists remotely, skipping tag creation"
+          elif git rev-parse ${{ steps.version.outputs.new_tag }} >/dev/null 2>&1; then
+            echo "Tag ${{ steps.version.outputs.new_tag }} exists locally, pushing to remote"
+            git push --tags
+          else
+            echo "Creating new tag ${{ steps.version.outputs.new_tag }}"
+            git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
+            git push --tags
+          fi
 
   # Note: forge-core doesn't have a frontend - frontend build happens in automagik-forge repo
   # build-frontend job removed - not needed for forge-core
@@ -148,18 +163,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            container: &zigbuild_container ghcr.io/rust-cross/cargo-zigbuild@sha256:af1bc2b869c5d76c1300f7a4685c2f1793d068e6e895c9f5c399b517b31a731e
+            container: &zigbuild_container ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18
             name: linux-x64
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            name: linux-arm64
-            container: *zigbuild_container
+          # ARM64 Linux temporarily disabled - musl stdlib issue
+          # - target: aarch64-unknown-linux-musl
+          #   os: ubuntu-latest
+          #   name: linux-arm64
+          #   container: *zigbuild_container
           - target: x86_64-pc-windows-msvc
             os: windows-latest-l
             name: windows-x64
-          - target: x86_64-apple-darwin
-            os: macos-13
-            name: macos-x64
           - target: aarch64-apple-darwin
             os: macos-14
             name: macos-arm64
@@ -172,33 +185,26 @@ jobs:
           ref: ${{ needs.bump-version.outputs.new_tag }}
 
       - name: Install Rust toolchain
+        if: runner.os != 'Linux'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
-      - name: Install libclang (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y clang libclang-dev
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "."
-          prefix-key: "cache-v1.0"
+          prefix-key: "forge-builder-v1"
           key: ${{ matrix.target }}_${{ matrix.os }}
           cache-on-failure: true
           shared-key: "shared"
           cache-all-crates: true
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
+      - name: Install musl target (Linux)
+        if: runner.os == 'Linux'
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build backend (Linux)
         if: runner.os == 'Linux'
@@ -227,7 +233,13 @@ jobs:
           version: 2.21.2
 
       - name: Upload source maps to Sentry
-        run: sentry-cli debug-files upload --include-sources target/${{ matrix.target }}/release
+        continue-on-error: true  # Don't fail build if Sentry secrets not configured
+        run: |
+          sentry-cli debug-files upload \
+            --org ${{ secrets.SENTRY_ORG }} \
+            --project ${{ secrets.SENTRY_PROJECT }} \
+            --include-sources \
+            target/${{ matrix.target }}/release
 
       - name: Prepare binaries (non-macOS)
         if: runner.os != 'macOS'
@@ -235,11 +247,11 @@ jobs:
         run: |
           mkdir -p dist
           if [[ "${{ matrix.os }}" == "windows-latest-l" ]]; then
-            cp target/${{ matrix.target }}/release/server.exe dist/vibe-kanban-${{ matrix.name }}.exe
-            cp target/${{ matrix.target }}/release/mcp_task_server.exe dist/vibe-kanban-mcp-${{ matrix.name }}.exe
+            cp target/${{ matrix.target }}/release/server.exe dist/automagik-forge-${{ matrix.name }}.exe
+            cp target/${{ matrix.target }}/release/mcp_task_server.exe dist/automagik-forge-mcp-${{ matrix.name }}.exe
           else
-            cp target/${{ matrix.target }}/release/server dist/vibe-kanban-${{ matrix.name }}
-            cp target/${{ matrix.target }}/release/mcp_task_server dist/vibe-kanban-mcp-${{ matrix.name }}
+            cp target/${{ matrix.target }}/release/server dist/automagik-forge-${{ matrix.name }}
+            cp target/${{ matrix.target }}/release/mcp_task_server dist/automagik-forge-mcp-${{ matrix.name }}
           fi
 
       # Code signing for macOS only
@@ -256,10 +268,11 @@ jobs:
 
       - name: Sign main binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail build if Apple signing credentials not configured
         uses: indygreg/apple-code-sign-action@v1
         with:
           input_path: target/${{ matrix.target }}/release/server
-          output_path: vibe-kanban
+          output_path: automagik-forge
           p12_file: certificate.p12
           p12_password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           sign: true
@@ -267,24 +280,26 @@ jobs:
 
       - name: Package main binary (macOS)
         if: runner.os == 'macOS'
-        run: zip vibe-kanban.zip vibe-kanban
+        continue-on-error: true  # Don't fail if binary doesn't exist (signing was skipped)
+        run: zip automagik-forge.zip automagik-forge
 
       - name: Notarize signed binary (macOS)
         if: runner.os == 'macOS'
         uses: indygreg/apple-code-sign-action@v1
         continue-on-error: true
         with:
-          input_path: vibe-kanban.zip
+          input_path: automagik-forge.zip
           sign: false
           notarize: true
           app_store_connect_api_key_json_file: app_store_key.json
 
       - name: Sign MCP binary (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail build if Apple signing credentials not configured
         uses: indygreg/apple-code-sign-action@v1
         with:
           input_path: target/${{ matrix.target }}/release/mcp_task_server
-          output_path: vibe-kanban-mcp
+          output_path: automagik-forge-mcp
           p12_file: certificate.p12
           p12_password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           sign: true
@@ -292,24 +307,26 @@ jobs:
 
       - name: Package MCP binary (macOS)
         if: runner.os == 'macOS'
-        run: zip vibe-kanban-mcp.zip vibe-kanban-mcp
+        continue-on-error: true  # Don't fail if binary doesn't exist (signing was skipped)
+        run: zip automagik-forge-mcp.zip automagik-forge-mcp
 
       - name: Notarize signed MCP binary (macOS)
         if: runner.os == 'macOS'
         uses: indygreg/apple-code-sign-action@v1
         continue-on-error: true
         with:
-          input_path: vibe-kanban-mcp.zip
+          input_path: automagik-forge-mcp.zip
           sign: false
           notarize: true
           app_store_connect_api_key_json_file: app_store_key.json
 
       - name: Prepare signed binaries (macOS)
         if: runner.os == 'macOS'
+        continue-on-error: true  # Don't fail if zip files don't exist (signing/packaging was skipped)
         run: |
           mkdir -p dist
-          cp vibe-kanban.zip dist/vibe-kanban-${{ matrix.name }}.zip
-          cp vibe-kanban-mcp.zip dist/vibe-kanban-mcp-${{ matrix.name }}.zip
+          cp automagik-forge.zip dist/automagik-forge-${{ matrix.name }}.zip
+          cp automagik-forge-mcp.zip dist/automagik-forge-mcp-${{ matrix.name }}.zip
 
       - name: Clean up certificates (macOS)
         if: runner.os == 'macOS'
@@ -334,38 +351,29 @@ jobs:
         include:
           - target: x86_64-unknown-linux-musl
             name: linux-x64
-            binary: vibe-kanban
-            mcp_binary: vibe-kanban-mcp
+            binary: automagik-forge
+            mcp_binary: automagik-forge-mcp
           - target: x86_64-pc-windows-msvc
             name: windows-x64
-            binary: vibe-kanban.exe
-            mcp_binary: vibe-kanban-mcp.exe
-          - target: x86_64-apple-darwin
-            name: macos-x64
-            binary: vibe-kanban
-            mcp_binary: vibe-kanban-mcp
+            binary: automagik-forge.exe
+            mcp_binary: automagik-forge-mcp.exe
           - target: aarch64-apple-darwin
             name: macos-arm64
-            binary: vibe-kanban
-            mcp_binary: vibe-kanban-mcp
+            binary: automagik-forge
+            mcp_binary: automagik-forge-mcp
           - target: aarch64-pc-windows-msvc
             name: windows-arm64
-            binary: vibe-kanban.exe
-            mcp_binary: vibe-kanban-mcp.exe
-          - target: aarch64-unknown-linux-musl
-            name: linux-arm64
-            binary: vibe-kanban
-            mcp_binary: vibe-kanban-mcp
+            binary: automagik-forge.exe
+            mcp_binary: automagik-forge-mcp.exe
+          # ARM64 Linux temporarily disabled - musl stdlib issue
+          # - target: aarch64-unknown-linux-musl
+          #   name: linux-arm64
+          #   binary: automagik-forge
+          #   mcp_binary: automagik-forge-mcp
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.bump-version.outputs.new_tag }}
-
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
 
       - name: Download backend binary artifact
         uses: actions/download-artifact@v4
@@ -382,22 +390,22 @@ jobs:
         if: matrix.name != 'macos-arm64' && matrix.name != 'macos-x64'
         run: |
           mkdir -p npx-cli/dist/${{ matrix.name }}
-          mkdir vibe-kanban-${{ matrix.name }}
-          mkdir vibe-kanban-mcp-${{ matrix.name }}
+          mkdir automagik-forge-${{ matrix.name }}
+          mkdir automagik-forge-mcp-${{ matrix.name }}
 
-          cp dist/vibe-kanban-${{ matrix.name }}* vibe-kanban-${{ matrix.name }}/${{ matrix.binary }}
-          cp dist/vibe-kanban-mcp-${{ matrix.name }}* vibe-kanban-mcp-${{ matrix.name }}/${{ matrix.mcp_binary }}
+          cp dist/automagik-forge-${{ matrix.name }}* automagik-forge-${{ matrix.name }}/${{ matrix.binary }}
+          cp dist/automagik-forge-mcp-${{ matrix.name }}* automagik-forge-mcp-${{ matrix.name }}/${{ matrix.mcp_binary }}
 
-          zip -j npx-cli/dist/${{ matrix.name }}/vibe-kanban.zip vibe-kanban-${{ matrix.name }}/${{ matrix.binary }}
-          zip -j npx-cli/dist/${{ matrix.name }}/vibe-kanban-mcp.zip vibe-kanban-mcp-${{ matrix.name }}/${{ matrix.mcp_binary }}
+          zip -j npx-cli/dist/${{ matrix.name }}/automagik-forge.zip automagik-forge-${{ matrix.name }}/${{ matrix.binary }}
+          zip -j npx-cli/dist/${{ matrix.name }}/automagik-forge-mcp.zip automagik-forge-mcp-${{ matrix.name }}/${{ matrix.mcp_binary }}
 
       - name: Create platform package (macOS)
         if: matrix.name == 'macos-arm64' || matrix.name == 'macos-x64'
         run: |
           mkdir -p npx-cli/dist/${{ matrix.name }}
-          mkdir vibe-kanban-${{ matrix.name }}
-          cp dist/vibe-kanban-${{ matrix.name }}* npx-cli/dist/${{ matrix.name }}/vibe-kanban.zip
-          cp dist/vibe-kanban-mcp-${{ matrix.name }}* npx-cli/dist/${{ matrix.name }}/vibe-kanban-mcp.zip
+          mkdir automagik-forge-${{ matrix.name }}
+          cp dist/automagik-forge-${{ matrix.name }}* npx-cli/dist/${{ matrix.name }}/automagik-forge.zip
+          cp dist/automagik-forge-mcp-${{ matrix.name }}* npx-cli/dist/${{ matrix.name }}/automagik-forge-mcp.zip
 
       - name: Upload platform package artifact
         uses: actions/upload-artifact@v4
@@ -414,12 +422,6 @@ jobs:
         with:
           ref: ${{ needs.bump-version.outputs.new_tag }}
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
       - name: Download backend npx-cli zips
         uses: actions/download-artifact@v4
         with:
@@ -431,14 +433,6 @@ jobs:
         run: |
           echo "Backend dist:"
           find npx-cli/dist
-          echo "Frontend dist:"
-          find frontend/dist
-
-      - name: Zip frontend
-        run: |
-          mkdir vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
-          mv frontend/dist vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
-          zip -r vibe-kanban-${{ needs.bump-version.outputs.new_tag }}.zip vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
 
       - name: Setup Node for npm pack
         uses: ./.github/actions/setup-node
@@ -455,6 +449,4 @@ jobs:
           name: Pre-release ${{ needs.bump-version.outputs.new_tag }}
           prerelease: true
           generate_release_notes: true
-          files: |
-            vibe-kanban-${{ needs.bump-version.outputs.new_tag }}.zip
-            npx-cli/vibe-kanban-*.tgz
+          files: npx-cli/automagik-forge-*.tgz
