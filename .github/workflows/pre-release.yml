@@ -237,6 +237,7 @@ jobs:
           version: 2.21.2
 
       - name: Upload source maps to Sentry
+        continue-on-error: true  # Don't fail build if Sentry secrets not configured
         run: |
           sentry-cli debug-files upload \
             --org ${{ secrets.SENTRY_ORG }} \
