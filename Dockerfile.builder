@@ -53,9 +53,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Verify Rust installation
 RUN rustc --version && cargo --version
 
-# Add common Linux targets
-# Cache-bust: 2025-12-03T03:48:00Z - Force reinstall musl stdlib
-RUN rustup target add \
+# Add common Linux targets (cache-bust: force fresh install)
+RUN echo "Installing targets: $(date -u +%Y-%m-%dT%H:%M:%SZ)" && rustup target add \
     x86_64-unknown-linux-gnu \
     x86_64-unknown-linux-musl \
     aarch64-unknown-linux-gnu \
