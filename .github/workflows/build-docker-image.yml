@@ -1,0 +1,89 @@
+name: Build Docker Builder Image
+
+on:
+  push:
+    paths:
+      - 'Dockerfile.builder'
+    branches:
+      - main
+      - dev
+  schedule:
+    # Weekly rebuild for security updates (Sundays at 3 AM UTC)
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      rust_version:
+        description: 'Rust nightly version (e.g., nightly-2025-05-18)'
+        required: false
+        default: 'nightly-2025-05-18'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Rust version
+        id: rust-version
+        run: |
+          if [ -n "${{ github.event.inputs.rust_version }}" ]; then
+            RUST_VERSION="${{ github.event.inputs.rust_version }}"
+          else
+            # Extract from rust-toolchain.toml if it exists
+            if [ -f rust-toolchain.toml ]; then
+              RUST_VERSION=$(grep -E '^channel\s*=' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
+            else
+              RUST_VERSION="nightly-2025-05-18"
+            fi
+          fi
+          echo "version=$RUST_VERSION" >> $GITHUB_OUTPUT
+          echo "Building with Rust version: $RUST_VERSION"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/namastexlabs/forge-builder
+          tags: |
+            type=raw,value=${{ steps.rust-version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.builder
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Test image
+        run: |
+          docker pull ghcr.io/namastexlabs/forge-builder:${{ steps.rust-version.outputs.version }}
+          docker run --rm ghcr.io/namastexlabs/forge-builder:${{ steps.rust-version.outputs.version }} \
+            bash -c "rustc --version && node --version && pnpm --version && cargo zigbuild --version"
+
+      - name: Image size report
+        run: |
+          SIZE=$(docker image inspect ghcr.io/namastexlabs/forge-builder:${{ steps.rust-version.outputs.version }} --format='{{.Size}}' | awk '{print $1/1024/1024 " MB"}')
+          echo "### Docker Image Size: $SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.rust-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** ghcr.io/namastexlabs/forge-builder" >> $GITHUB_STEP_SUMMARY
