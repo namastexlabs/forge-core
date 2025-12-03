@@ -194,12 +194,6 @@ jobs:
           shared-key: "shared"
           cache-all-crates: true
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
       - name: Build backend (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -361,12 +355,6 @@ jobs:
         with:
           ref: ${{ needs.bump-version.outputs.new_tag }}
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
       - name: Download backend binary artifact
         uses: actions/download-artifact@v4
         with:
@@ -414,12 +402,6 @@ jobs:
         with:
           ref: ${{ needs.bump-version.outputs.new_tag }}
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
       - name: Download backend npx-cli zips
         uses: actions/download-artifact@v4
         with:
@@ -431,14 +413,6 @@ jobs:
         run: |
           echo "Backend dist:"
           find npx-cli/dist
-          echo "Frontend dist:"
-          find frontend/dist
-
-      - name: Zip frontend
-        run: |
-          mkdir vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
-          mv frontend/dist vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
-          zip -r vibe-kanban-${{ needs.bump-version.outputs.new_tag }}.zip vibe-kanban-${{ needs.bump-version.outputs.new_tag }}
 
       - name: Setup Node for npm pack
         uses: ./.github/actions/setup-node
@@ -455,6 +429,4 @@ jobs:
           name: Pre-release ${{ needs.bump-version.outputs.new_tag }}
           prerelease: true
           generate_release_notes: true
-          files: |
-            vibe-kanban-${{ needs.bump-version.outputs.new_tag }}.zip
-            npx-cli/vibe-kanban-*.tgz
+          files: npx-cli/vibe-kanban-*.tgz
