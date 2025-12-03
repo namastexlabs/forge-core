@@ -139,12 +139,16 @@ jobs:
             echo "No version changes to commit (already at ${{ steps.version.outputs.new_version }})"
           fi
 
-          # Only create tag if it doesn't exist
-          if ! git rev-parse ${{ steps.version.outputs.new_tag }} >/dev/null 2>&1; then
-            git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
+          # Only create tag if it doesn't exist (check both local and remote)
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.version.outputs.new_tag }}$"; then
+            echo "Tag ${{ steps.version.outputs.new_tag }} already exists remotely, skipping tag creation"
+          elif git rev-parse ${{ steps.version.outputs.new_tag }} >/dev/null 2>&1; then
+            echo "Tag ${{ steps.version.outputs.new_tag }} exists locally, pushing to remote"
             git push --tags
           else
-            echo "Tag ${{ steps.version.outputs.new_tag }} already exists"
+            echo "Creating new tag ${{ steps.version.outputs.new_tag }}"
+            git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
+            git push --tags
           fi
 
   # Note: forge-core doesn't have a frontend - frontend build happens in automagik-forge repo
