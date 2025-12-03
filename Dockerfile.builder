@@ -5,7 +5,7 @@
 # Base: Debian bookworm-slim
 # Includes: Rust nightly-2025-05-18, Node 22, pnpm 10.8.1, cargo-zigbuild, Zig 0.13.0
 # Optimized for: CT 200 self-hosted runners (12 cores, 12GB RAM)
-# Registry: ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18
+# Registry: ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18-v2
 # ============================================
 
 # ============================================
@@ -120,10 +120,10 @@ ENTRYPOINT ["/bin/bash"]
 LABEL org.opencontainers.image.source="https://github.com/namastexlabs/forge-core"
 LABEL org.opencontainers.image.description="High-performance build environment for Forge ecosystem"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.version="nightly-2025-05-18"
+LABEL org.opencontainers.image.version="nightly-2025-05-18-v2"
 LABEL maintainer="Namaste Labs <hello@namastex.io>"
 
 # ============================================
 # Image size estimate: ~1.2GB
-# Build command: DOCKER_BUILDKIT=1 docker build -f Dockerfile.builder -t ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18 .
+# Build command: DOCKER_BUILDKIT=1 docker build -f Dockerfile.builder -t ghcr.io/namastexlabs/forge-builder:nightly-2025-05-18-v2 .
 # ============================================
