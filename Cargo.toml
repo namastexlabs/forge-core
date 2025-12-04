@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.6-rc.4"
+version = "0.8.7-rc.1"
 edition = "2024"
 
 [workspace.dependencies]
@@ -29,7 +29,7 @@ assert_matches = "1.5.0"
 async-channel = "2.3.1"
 async-stream = "0.3.6"
 async-trait = "0.1.89"
-axum = { version = "0.8", default-features = false, features = ["query", "multipart", "macros", "tokio"] }
+axum = { version = "0.8", default-features = false, features = ["query", "multipart", "macros", "tokio", "http1", "json"] }
 base64 = "0.22.1"
 bytes = "1.10.1"
 chrono = "0.4.42"
@@ -89,7 +89,7 @@ ratatui = "0.29.0"
 ratatui-macros = "0.6.0"
 regex-lite = "0.1.7"
 reqwest = "0.12"
-rmcp = { version = "0.8.5" }
+rmcp = { version = "0.10.0" }
 schemars = { version = "1.0.4", features = ["uuid1"] }
 seccompiler = "0.5.0"
 sentry = "0.34.0"
