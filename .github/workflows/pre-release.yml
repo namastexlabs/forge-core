@@ -185,7 +185,6 @@ jobs:
           ref: ${{ needs.bump-version.outputs.new_tag }}
 
       - name: Install Rust toolchain
-        if: runner.os != 'Linux'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
