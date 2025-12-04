@@ -48,7 +48,7 @@ impl NotificationService {
     /// Send both sound and push notifications if enabled
     pub async fn notify(config: NotificationConfig, title: &str, message: &str) {
         if config.sound_enabled {
-            Self::play_sound_notification(&config.sound_file).await;
+            Self::play_sound_notification(&config.sound_file, config.sound_volume).await;
         }
 
         if config.push_enabled {
@@ -56,8 +56,8 @@ impl NotificationService {
         }
     }
 
-    /// Play a system sound notification across platforms
-    async fn play_sound_notification(sound_file: &SoundFile) {
+    /// Play a system sound notification across platforms with volume control
+    async fn play_sound_notification(sound_file: &SoundFile, volume: u8) {
         let file_path = match sound_file.get_path().await {
             Ok(path) => path,
             Err(e) => {
@@ -66,15 +66,26 @@ impl NotificationService {
             }
         };
 
+        // Clamp volume to 0-100
+        let volume = volume.min(100);
+
         // Use platform-specific sound notification
         // Note: spawn() calls are intentionally not awaited - sound notifications should be fire-and-forget
         if cfg!(target_os = "macos") {
+            // macOS afplay supports volume with -v flag (0.0 to 1.0)
+            let volume_float = (volume as f32) / 100.0;
             let _ = tokio::process::Command::new("afplay")
+                .arg("-v")
+                .arg(volume_float.to_string())
                 .arg(&file_path)
                 .spawn();
         } else if cfg!(target_os = "linux") && !utils::is_wsl2() {
             // Try different Linux audio players
+            // PulseAudio paplay supports volume with --volume (0-65536, where 65536 = 100%)
+            let pulse_volume = ((volume as u32) * 65536) / 100;
             if tokio::process::Command::new("paplay")
+                .arg("--volume")
+                .arg(pulse_volume.to_string())
                 .arg(&file_path)
                 .spawn()
                 .is_ok()
@@ -85,7 +96,8 @@ impl NotificationService {
                 .spawn()
                 .is_ok()
             {
-                // Success with aplay
+                // Success with aplay (no volume control, plays at system volume)
+                // TODO: Could use amixer to set volume temporarily
             } else {
                 // Try system bell as fallback
                 let _ = tokio::process::Command::new("echo")
@@ -105,12 +117,30 @@ impl NotificationService {
                 file_path.to_string_lossy().to_string()
             };
 
+            // Windows Media.SoundPlayer doesn't support volume directly
+            // We need to use a more complex approach with Windows Media Foundation
+            // For now, we'll use a workaround by adjusting the WAV data volume
+            let _volume_float = (volume as f32) / 100.0;
             let _ = tokio::process::Command::new("powershell.exe")
                 .arg("-c")
                 .arg(format!(
-                    r#"(New-Object Media.SoundPlayer "{file_path}").PlaySync()"#
+                    r#"
+                    $player = New-Object Media.SoundPlayer "{file_path}"
+                    # Note: SoundPlayer doesn't support volume directly
+                    # Playing at system volume for now
+                    $player.PlaySync()
+                    "#
                 ))
                 .spawn();
+            // TODO: For proper volume control on Windows, we'd need to:
+            // 1. Use Windows Core Audio APIs via FFI, or
+            // 2. Pre-process the WAV file to adjust amplitude, or
+            // 3. Use a different audio library that supports volume
+            if volume < 100 {
+                tracing::debug!(
+                    "Volume control not fully implemented for Windows yet, playing at system volume"
+                );
+            }
         }
     }
 
