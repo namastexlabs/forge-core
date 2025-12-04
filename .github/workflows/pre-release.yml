@@ -195,8 +195,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "."
-          prefix-key: "forge-builder-v1"
-          key: ${{ matrix.target }}_${{ matrix.os }}
+          prefix-key: "forge-builder-v2"
+          key: ${{ runner.os }}-${{ matrix.target }}
           cache-on-failure: true
           shared-key: "shared"
           cache-all-crates: true
