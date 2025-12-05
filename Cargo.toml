@@ -184,6 +184,12 @@ unnecessary_sort_by = "deny"
 unnecessary_to_owned = "deny"
 unwrap_used = "deny"
 
+# Pin zerocopy to version compatible with nightly-2025-05-18
+# zerocopy 0.8.31 (Nov 2025) uses stdarch_x86_avx512 which requires
+# Rust features not available in the May 2025 nightly toolchain
+[patch.crates-io]
+zerocopy = { git = "https://github.com/google/zerocopy", tag = "v0.8.14" }
+
 [profile.release]
 debug = true
 split-debuginfo = "packed"
