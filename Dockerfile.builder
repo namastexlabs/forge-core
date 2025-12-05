@@ -24,6 +24,8 @@ RUN apt-get update && apt-get install -y \
     perl \
     pkg-config \
     libssl-dev \
+    musl-dev \
+    musl-tools \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
