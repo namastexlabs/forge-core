@@ -1,0 +1,56 @@
+name: Sync Version from Forge
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to sync (e.g., 0.8.7-rc.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: |
+          echo "🔄 Syncing forge-core to version ${{ inputs.version }}"
+          cargo set-version --workspace ${{ inputs.version }}
+
+      - name: Commit and tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="v${VERSION}"
+
+          git add -A
+          git commit -m "chore: sync version to ${VERSION} from automagik-forge" || echo "Nothing to commit"
+
+          # Create annotated tag
+          git tag -a "${TAG}" -m "Release ${TAG} (synced from automagik-forge)"
+
+          echo "✅ Created tag ${TAG}"
+
+      - name: Push changes and tag
+        run: |
+          git push origin main
+          git push origin --tags
+          echo "✅ Pushed changes and tag to origin"

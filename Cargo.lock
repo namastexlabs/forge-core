@@ -481,7 +481,6 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
- "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
  "sha1",
@@ -1098,7 +1097,7 @@ checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
 name = "db"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1134,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "deployment"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1428,7 +1427,7 @@ dependencies = [
 
 [[package]]
 name = "executors"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "agent-client-protocol",
  "async-trait",
@@ -1532,9 +1531,9 @@ dependencies = [
 
 [[package]]
 name = "flate2"
-version = "1.1.7"
+version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2152dbcb980c05735e2a651d96011320a949eb31a0c8b38b72645ce97dec676"
+checksum = "bfe33edd8e85a12a67454e37f8c75e730830d83e313556ab9ebf9ee7fbeb3bfb"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -2597,7 +2596,7 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 
 [[package]]
 name = "local-deployment"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2761,9 +2760,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.1.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a69bcab0ad47271a0234d9422b131806bf3968021e5dc9328caf2d4cd58557fc"
+checksum = "69d83b0086dc8ecf3ce9ae2874b2d1290252e2a30720bea58a5c6639b0092873"
 dependencies = [
  "libc",
  "log",
@@ -3268,15 +3267,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
 
 [[package]]
-name = "openssl-src"
-version = "300.5.4+3.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a507b3792995dae9b0df8a1c1e3771e8418b7c2d9f0baeba32e6fe8b06c7cb72"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "openssl-sys"
 version = "0.9.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3284,7 +3274,6 @@ checksum = "82cab2d520aa75e3c58898289429321eb788c3106963d0dc886ec7a5f4adc321"
 dependencies = [
  "cc",
  "libc",
- "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -3361,10 +3350,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "pastey"
-version = "0.2.0"
+name = "paste"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57d6c094ee800037dff99e02cab0eaf3142826586742a270ab3d7a62656bd27a"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pathdiff"
@@ -3790,15 +3779,14 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "0.10.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b18323edc657390a6ed4d7a9110b0dec2dc3ed128eb2a123edfbafabdbddc5"
+checksum = "2faf35b7d3c4b7f8c21c45bb014011b32a0ce6444bf6094da04daab01a8c3c34"
 dependencies = [
- "async-trait",
  "base64",
  "chrono",
  "futures",
- "pastey",
+ "paste",
  "pin-project-lite",
  "rmcp-macros",
  "schemars 1.1.0",
@@ -3812,9 +3800,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp-macros"
-version = "0.10.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c75d0a62676bf8c8003c4e3c348e2ceb6a7b3e48323681aaf177fdccdac2ce50"
+checksum = "ad9720d9d2a943779f1dc3d47fa9072c7eeffaff4e1a82f67eb9f7ea52696091"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -4346,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4393,7 +4381,7 @@ dependencies = [
 
 [[package]]
 name = "services"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5580,7 +5568,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "utils"
-version = "0.8.8-rc.2"
+version = "0.8.7-rc.1"
 dependencies = [
  "async-stream",
  "axum",
@@ -6385,16 +6373,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.23"
-source = "git+https://github.com/google/zerocopy?tag=v0.8.23#5aa0bca4106a481bd9d117f34b5e75c14645e7da"
+version = "0.8.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd74ec98b9250adb3ca554bdde269adf631549f51d8a8f8f0a10b50f1cb298c3"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.23"
-source = "git+https://github.com/google/zerocopy?tag=v0.8.23#5aa0bca4106a481bd9d117f34b5e75c14645e7da"
+version = "0.8.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8a8d209fdf45cf5138cbb5a506f6b52522a25afccc534d1475dad8e31105c6a"
 dependencies = [
  "proc-macro2",
  "quote",
