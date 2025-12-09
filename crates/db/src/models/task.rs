@@ -29,7 +29,7 @@ pub struct Task {
     pub description: Option<String>,
     pub status: TaskStatus,
     pub parent_task_attempt: Option<Uuid>, // Foreign key to parent TaskAttempt
-    pub dev_server_id: Option<Uuid>, // Foreign key to DevServer (for analytics)
+    pub dev_server_id: Option<Uuid>,       // Foreign key to DevServer (for analytics)
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

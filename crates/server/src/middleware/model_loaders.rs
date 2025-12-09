@@ -212,22 +212,18 @@ pub async fn load_execution_run_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     // Load the ExecutionRun from the database
-    let execution_run = match ExecutionRun::find_by_id(&deployment.db().pool, execution_run_id).await
-    {
-        Ok(Some(run)) => run,
-        Ok(None) => {
-            tracing::warn!("ExecutionRun {} not found", execution_run_id);
-            return Err(StatusCode::NOT_FOUND);
-        }
-        Err(e) => {
-            tracing::error!(
-                "Failed to fetch ExecutionRun {}: {}",
-                execution_run_id,
-                e
-            );
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
+    let execution_run =
+        match ExecutionRun::find_by_id(&deployment.db().pool, execution_run_id).await {
+            Ok(Some(run)) => run,
+            Ok(None) => {
+                tracing::warn!("ExecutionRun {} not found", execution_run_id);
+                return Err(StatusCode::NOT_FOUND);
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch ExecutionRun {}: {}", execution_run_id, e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        };
 
     // Insert the execution run into extensions
     request.extensions_mut().insert(execution_run);

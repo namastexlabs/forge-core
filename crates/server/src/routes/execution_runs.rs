@@ -16,8 +16,7 @@ use db::models::{
 use deployment::Deployment;
 use executors::{
     actions::{
-        ExecutorAction, ExecutorActionType,
-        coding_agent_follow_up::CodingAgentFollowUpRequest,
+        ExecutorAction, ExecutorActionType, coding_agent_follow_up::CodingAgentFollowUpRequest,
         coding_agent_initial::CodingAgentInitialRequest,
     },
     profile::ExecutorProfileId,
@@ -108,7 +107,8 @@ pub async fn create_execution_run(
         prompt: payload.prompt.clone(),
     };
 
-    let execution_run = ExecutionRun::create(pool, &create_run, run_id, payload.project_id, &branch_name).await?;
+    let execution_run =
+        ExecutionRun::create(pool, &create_run, run_id, payload.project_id, &branch_name).await?;
 
     // Start the run using container service
     let execution_process = match deployment
@@ -155,22 +155,18 @@ pub async fn follow_up(
     let pool = &deployment.db().pool;
 
     // Get the latest session for this run
-    let latest_session_id = ExecutionProcess::find_latest_session_id_by_execution_run(
-        pool,
-        execution_run.id,
-    )
-    .await?;
+    let latest_session_id =
+        ExecutionProcess::find_latest_session_id_by_execution_run(pool, execution_run.id).await?;
 
     // Get executor profile from the latest process
-    let initial_executor_profile_id = ExecutionProcess::latest_executor_profile_for_run(
-        pool,
-        execution_run.id,
-    )
-    .await?;
+    let initial_executor_profile_id =
+        ExecutionProcess::latest_executor_profile_for_run(pool, execution_run.id).await?;
 
     let executor_profile_id = ExecutorProfileId {
         executor: initial_executor_profile_id.executor,
-        variant: payload.variant.or(initial_executor_profile_id.variant.clone()),
+        variant: payload
+            .variant
+            .or(initial_executor_profile_id.variant.clone()),
     };
 
     let action_type = if let Some(session_id) = latest_session_id {
