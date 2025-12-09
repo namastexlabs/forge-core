@@ -45,8 +45,8 @@ pub struct TaskAttempt {
     // "GEMINI", etc.)
     pub worktree_deleted: bool, // Flag indicating if worktree has been cleaned up
     pub setup_completed_at: Option<DateTime<Utc>>, // When setup script was last completed
-    pub input_tokens: Option<i32>,     // LLM input tokens used
-    pub output_tokens: Option<i32>,    // LLM output tokens generated
+    pub input_tokens: Option<i32>, // LLM input tokens used
+    pub output_tokens: Option<i32>, // LLM output tokens generated
     pub cache_creation_tokens: Option<i32>, // Prompt cache creation tokens (Claude)
     pub cache_read_tokens: Option<i32>, // Prompt cache read tokens (Claude)
     pub created_at: DateTime<Utc>,

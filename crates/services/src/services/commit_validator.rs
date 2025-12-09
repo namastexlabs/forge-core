@@ -42,7 +42,8 @@ impl CommitValidator {
         // Check for internal UUIDs (WARNING level)
         if commit_message.contains("automagik-forge") {
             warnings.push(ValidationWarning {
-                message: "Commit message contains internal identifier 'automagik-forge'".to_string(),
+                message: "Commit message contains internal identifier 'automagik-forge'"
+                    .to_string(),
                 severity: WarningSeverity::Warning,
             });
         }
@@ -72,10 +73,28 @@ impl CommitValidator {
         let first_line = commit_message.lines().next().unwrap_or("");
 
         let conventional_prefixes = [
-            "feat:", "fix:", "docs:", "style:", "refactor:", "perf:", "test:", "build:", "ci:",
-            "chore:", "revert:",
-            "feat(", "fix(", "docs(", "style(", "refactor(", "perf(", "test(", "build(", "ci(",
-            "chore(", "revert(",
+            "feat:",
+            "fix:",
+            "docs:",
+            "style:",
+            "refactor:",
+            "perf:",
+            "test:",
+            "build:",
+            "ci:",
+            "chore:",
+            "revert:",
+            "feat(",
+            "fix(",
+            "docs(",
+            "style(",
+            "refactor(",
+            "perf(",
+            "test(",
+            "build(",
+            "ci(",
+            "chore(",
+            "revert(",
         ];
 
         conventional_prefixes
@@ -121,9 +140,11 @@ mod tests {
         let warnings = CommitValidator::validate(msg);
 
         // Should have no errors or warnings, just optional info
-        assert!(warnings
-            .iter()
-            .all(|w| w.severity != WarningSeverity::Error));
+        assert!(
+            warnings
+                .iter()
+                .all(|w| w.severity != WarningSeverity::Error)
+        );
     }
 
     #[test]
@@ -131,9 +152,11 @@ mod tests {
         let msg = "Perfect! Let me create a summary for you:";
         let warnings = CommitValidator::validate(msg);
 
-        assert!(warnings
-            .iter()
-            .any(|w| w.severity == WarningSeverity::Error));
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.severity == WarningSeverity::Error)
+        );
     }
 
     #[test]
@@ -164,9 +187,7 @@ mod tests {
 
     #[test]
     fn test_has_issue_reference() {
-        assert!(CommitValidator::has_issue_reference(
-            "fix: bug (#123)"
-        ));
+        assert!(CommitValidator::has_issue_reference("fix: bug (#123)"));
         assert!(CommitValidator::has_issue_reference(
             "feat: feature\n\nCloses #456"
         ));

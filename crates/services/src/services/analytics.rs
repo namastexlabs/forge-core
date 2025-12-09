@@ -87,8 +87,8 @@ impl AnalyticsService {
                 props.insert("device".to_string(), get_device_info());
 
                 // Detect installation mode: "npm" (production) or "development" (local dev)
-                let installation_mode = std::env::var("FORGE_INSTALLATION_MODE")
-                    .unwrap_or_else(|_| "npm".to_string());
+                let installation_mode =
+                    std::env::var("FORGE_INSTALLATION_MODE").unwrap_or_else(|_| "npm".to_string());
                 props.insert("source".to_string(), json!(installation_mode));
             }
             payload["properties"] = event_properties;

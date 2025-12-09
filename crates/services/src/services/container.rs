@@ -356,7 +356,10 @@ pub trait ContainerService {
             let task_attempt = match process.parent_task_attempt(&self.db().pool).await {
                 Ok(Some(task_attempt)) => task_attempt,
                 Ok(None) => {
-                    tracing::error!("No task attempt found for ID: {:?}", process.task_attempt_id);
+                    tracing::error!(
+                        "No task attempt found for ID: {:?}",
+                        process.task_attempt_id
+                    );
                     return None;
                 }
                 Err(e) => {
@@ -828,7 +831,10 @@ pub trait ContainerService {
     }
 
     /// Create a worktree for an execution run
-    async fn create_for_run(&self, execution_run: &ExecutionRun) -> Result<ContainerRef, ContainerError>;
+    async fn create_for_run(
+        &self,
+        execution_run: &ExecutionRun,
+    ) -> Result<ContainerRef, ContainerError>;
 
     /// Start an execution run - lightweight executor invocation without Task
     async fn start_run(
@@ -979,7 +985,8 @@ pub trait ContainerService {
             if let Some(executor) =
                 ExecutorConfigs::get_cached().get_coding_agent(executor_profile_id)
             {
-                executor.normalize_logs(msg_store, &self.execution_run_to_current_dir(execution_run));
+                executor
+                    .normalize_logs(msg_store, &self.execution_run_to_current_dir(execution_run));
             } else {
                 tracing::error!(
                     "Failed to resolve profile '{:?}' for normalization",

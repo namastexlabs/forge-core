@@ -188,9 +188,7 @@ mod tests {
     #[test]
     fn test_sanitize_title_removes_conversational_prefixes() {
         assert_eq!(
-            CommitMessageGenerator::sanitize_title(
-                "Perfect! Let me create a summary for you:"
-            ),
+            CommitMessageGenerator::sanitize_title("Perfect! Let me create a summary for you:"),
             "create a summary for you:"
         );
 
@@ -259,11 +257,8 @@ mod tests {
 
     #[test]
     fn test_sanitize_and_format_with_issue() {
-        let result = CommitMessageGenerator::sanitize_and_format(
-            "implement OAuth login",
-            None,
-            Some(123),
-        );
+        let result =
+            CommitMessageGenerator::sanitize_and_format("implement OAuth login", None, Some(123));
 
         assert_eq!(result, "implement OAuth login (#123)");
     }

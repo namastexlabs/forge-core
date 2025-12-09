@@ -10,8 +10,11 @@
 //! Run with: cargo test --package services --test execution_run_model
 
 use db::{
-    models::{execution_run::ExecutionRun, project::{CreateProject, Project}},
     DBService,
+    models::{
+        execution_run::ExecutionRun,
+        project::{CreateProject, Project},
+    },
 };
 use tempfile::TempDir;
 use uuid::Uuid;
@@ -111,7 +114,9 @@ async fn test_execution_run_find_by_id() {
     assert_eq!(found.unwrap().id, run_id);
 
     // Non-existent ID returns None
-    let not_found = ExecutionRun::find_by_id(pool, Uuid::new_v4()).await.unwrap();
+    let not_found = ExecutionRun::find_by_id(pool, Uuid::new_v4())
+        .await
+        .unwrap();
     assert!(not_found.is_none());
 }
 
@@ -202,7 +207,10 @@ async fn test_execution_run_update_container_ref() {
     .unwrap();
 
     // Initially no container_ref
-    let run = ExecutionRun::find_by_id(pool, run_id).await.unwrap().unwrap();
+    let run = ExecutionRun::find_by_id(pool, run_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(run.container_ref.is_none());
 
     // Update container_ref
@@ -210,8 +218,14 @@ async fn test_execution_run_update_container_ref() {
         .await
         .unwrap();
 
-    let updated = ExecutionRun::find_by_id(pool, run_id).await.unwrap().unwrap();
-    assert_eq!(updated.container_ref.as_deref(), Some("/worktrees/test-123"));
+    let updated = ExecutionRun::find_by_id(pool, run_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        updated.container_ref.as_deref(),
+        Some("/worktrees/test-123")
+    );
 }
 
 #[tokio::test]
@@ -239,12 +253,20 @@ async fn test_execution_run_mark_worktree_deleted() {
     .unwrap();
 
     // Initially not deleted
-    let run = ExecutionRun::find_by_id(pool, run_id).await.unwrap().unwrap();
+    let run = ExecutionRun::find_by_id(pool, run_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(!run.worktree_deleted);
 
     // Mark as deleted
-    ExecutionRun::mark_worktree_deleted(pool, run_id).await.unwrap();
+    ExecutionRun::mark_worktree_deleted(pool, run_id)
+        .await
+        .unwrap();
 
-    let deleted = ExecutionRun::find_by_id(pool, run_id).await.unwrap().unwrap();
+    let deleted = ExecutionRun::find_by_id(pool, run_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(deleted.worktree_deleted);
 }

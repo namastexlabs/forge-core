@@ -278,7 +278,9 @@ pub async fn follow_up(
 
     let executor_profile_id = ExecutorProfileId {
         executor: initial_executor_profile_id.executor,
-        variant: payload.variant.or(initial_executor_profile_id.variant.clone()),
+        variant: payload
+            .variant
+            .or(initial_executor_profile_id.variant.clone()),
     };
 
     // Get parent task

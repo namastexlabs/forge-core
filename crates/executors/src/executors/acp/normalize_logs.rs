@@ -630,12 +630,12 @@ impl TryFrom<SessionNotification> for AcpEvent {
             acp::SessionUpdate::ToolCall(tc) => AcpEvent::ToolCall(tc),
             acp::SessionUpdate::ToolCallUpdate(update) => AcpEvent::ToolUpdate(update),
             acp::SessionUpdate::Plan(plan) => AcpEvent::Plan(plan),
-            acp::SessionUpdate::AvailableCommandsUpdate { available_commands, .. } => {
-                AcpEvent::AvailableCommands(available_commands)
-            }
-            acp::SessionUpdate::CurrentModeUpdate { current_mode_id, .. } => {
-                AcpEvent::CurrentMode(current_mode_id)
-            }
+            acp::SessionUpdate::AvailableCommandsUpdate {
+                available_commands, ..
+            } => AcpEvent::AvailableCommands(available_commands),
+            acp::SessionUpdate::CurrentModeUpdate {
+                current_mode_id, ..
+            } => AcpEvent::CurrentMode(current_mode_id),
             _ => return Err(()),
         };
         Ok(event)
