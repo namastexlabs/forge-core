@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 use ts_rs::TS;
-use utils::log_msg::LogMsg;
+use forge_core_utils::log_msg::LogMsg;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]

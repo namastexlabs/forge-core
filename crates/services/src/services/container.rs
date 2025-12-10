@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Error as AnyhowError, anyhow};
 use async_trait::async_trait;
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         execution_process::{
@@ -20,7 +20,7 @@ use db::{
         task_attempt::{TaskAttempt, TaskAttemptError},
     },
 };
-use executors::{
+use forge_core_executors::{
     actions::{
         ExecutorAction, ExecutorActionType,
         coding_agent_follow_up::CodingAgentFollowUpRequest,
@@ -35,7 +35,7 @@ use futures::{StreamExt, future};
 use sqlx::Error as SqlxError;
 use thiserror::Error;
 use tokio::{sync::RwLock, task::JoinHandle};
-use utils::{
+use forge_core_utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
     text::{git_branch_id, short_uuid},

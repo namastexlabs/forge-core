@@ -1,13 +1,20 @@
 [package]
-name = "deployment"
-version = "0.8.7-rc.12"
-edition = "2024"
+name = "forge-core-deployment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Deployment abstractions for Forge - handles local and cloud deployment strategies"
 
 [dependencies]
-db = { path = "../db" }
-utils = { path = "../utils" }
-services = { path = "../services" }
-executors = { path = "../executors" }
+forge-core-db = { workspace = true }
+forge-core-utils = { workspace = true }
+forge-core-services = { workspace = true }
+forge-core-executors = { workspace = true }
 async-trait = "0.1"
 thiserror = { workspace = true } 
 anyhow = { workspace = true }

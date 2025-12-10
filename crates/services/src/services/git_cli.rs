@@ -23,7 +23,7 @@ use std::{
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use thiserror::Error;
-use utils::shell::resolve_executable_path_blocking; // TODO: make GitCli async
+use forge_core_utils::shell::resolve_executable_path_blocking; // TODO: make GitCli async
 
 use crate::services::git::Commit;
 

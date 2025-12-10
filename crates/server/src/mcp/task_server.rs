@@ -6,12 +6,12 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use db::models::{
+use forge_core_db::models::{
     project::Project,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus, UpdateTask},
     task_attempt::TaskAttempt,
 };
-use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
+use forge_core_executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
@@ -849,7 +849,7 @@ impl TaskServer {
         // Response contains { execution_run, execution_process }
         #[derive(Deserialize)]
         struct ApiExecutionRunResponse {
-            execution_run: db::models::execution_run::ExecutionRun,
+            execution_run: forge_core_db::models::execution_run::ExecutionRun,
         }
 
         let resp: ApiExecutionRunResponse =
@@ -877,7 +877,7 @@ impl TaskServer {
             None => self.url("/api/execution-runs"),
         };
 
-        let runs: Vec<db::models::execution_run::ExecutionRun> =
+        let runs: Vec<forge_core_db::models::execution_run::ExecutionRun> =
             match self.send_json(self.client.get(&url)).await {
                 Ok(r) => r,
                 Err(e) => return Ok(e),
@@ -910,7 +910,7 @@ impl TaskServer {
     ) -> Result<CallToolResult, ErrorData> {
         let url = self.url(&format!("/api/execution-runs/{}", execution_run_id));
 
-        let run: db::models::execution_run::ExecutionRun =
+        let run: forge_core_db::models::execution_run::ExecutionRun =
             match self.send_json(self.client.get(&url)).await {
                 Ok(r) => r,
                 Err(e) => return Ok(e),

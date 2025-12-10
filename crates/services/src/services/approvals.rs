@@ -3,11 +3,11 @@ pub mod executor_approvals;
 use std::{collections::HashMap, sync::Arc, time::Duration as StdDuration};
 
 use dashmap::DashMap;
-use db::models::{
+use forge_core_db::models::{
     execution_process::ExecutionProcess,
     task::{Task, TaskStatus},
 };
-use executors::{
+use forge_core_executors::{
     approvals::ToolCallMetadata,
     logs::{
         NormalizedEntry, NormalizedEntryType, ToolStatus,
@@ -18,7 +18,7 @@ use futures::future::{BoxFuture, FutureExt, Shared};
 use sqlx::{Error as SqlxError, SqlitePool};
 use thiserror::Error;
 use tokio::sync::{RwLock, oneshot};
-use utils::{
+use forge_core_utils::{
     approvals::{ApprovalRequest, ApprovalResponse, ApprovalStatus},
     log_msg::LogMsg,
     msg_store::MsgStore,
@@ -312,8 +312,8 @@ fn find_matching_tool_use(
 mod tests {
     use std::sync::Arc;
 
-    use executors::logs::{ActionType, NormalizedEntry, NormalizedEntryType, ToolStatus};
-    use utils::msg_store::MsgStore;
+    use forge_core_executors::logs::{ActionType, NormalizedEntry, NormalizedEntryType, ToolStatus};
+    use forge_core_utils::msg_store::MsgStore;
 
     use super::*;
 
@@ -352,13 +352,13 @@ mod tests {
         let read_baz = create_tool_use_entry("Read", "baz.rs", "baz-id", ToolStatus::Created);
 
         store.push_patch(
-            executors::logs::utils::patch::ConversationPatch::add_normalized_entry(0, read_foo),
+            forge_core_executors::logs::utils::patch::ConversationPatch::add_normalized_entry(0, read_foo),
         );
         store.push_patch(
-            executors::logs::utils::patch::ConversationPatch::add_normalized_entry(1, read_bar),
+            forge_core_executors::logs::utils::patch::ConversationPatch::add_normalized_entry(1, read_bar),
         );
         store.push_patch(
-            executors::logs::utils::patch::ConversationPatch::add_normalized_entry(2, read_baz),
+            forge_core_executors::logs::utils::patch::ConversationPatch::add_normalized_entry(2, read_baz),
         );
 
         let (idx_foo, _) =
@@ -384,7 +384,7 @@ mod tests {
             },
         );
         store.push_patch(
-            executors::logs::utils::patch::ConversationPatch::add_normalized_entry(3, read_pending),
+            forge_core_executors::logs::utils::patch::ConversationPatch::add_normalized_entry(3, read_pending),
         );
 
         assert!(

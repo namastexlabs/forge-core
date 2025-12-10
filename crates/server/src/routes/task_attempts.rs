@@ -13,7 +13,7 @@ use axum::{
     response::{IntoResponse, Json as ResponseJson},
     routing::{get, post},
 };
-use db::models::{
+use forge_core_db::models::{
     draft::{Draft, DraftType},
     execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
     executor_session::ExecutorSession,
@@ -22,8 +22,8 @@ use db::models::{
     task::{Task, TaskRelationships, TaskStatus},
     task_attempt::{CreateTaskAttempt, TaskAttempt, TaskAttemptError},
 };
-use deployment::Deployment;
-use executors::{
+use forge_core_deployment::Deployment;
+use forge_core_executors::{
     actions::{
         ExecutorAction, ExecutorActionType,
         coding_agent_follow_up::CodingAgentFollowUpRequest,
@@ -34,7 +34,7 @@ use executors::{
 };
 use git2::BranchType;
 use serde::{Deserialize, Serialize};
-use services::services::{
+use forge_core_services::services::{
     commit_message_generator::CommitMessageGenerator,
     commit_validator::{CommitValidator, WarningSeverity},
     container::ContainerService,
@@ -43,7 +43,7 @@ use services::services::{
 };
 use sqlx::Error as SqlxError;
 use ts_rs::TS;
-use utils::response::ApiResponse;
+use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{
@@ -378,7 +378,7 @@ pub async fn follow_up(
         })
     } else {
         ExecutorActionType::CodingAgentInitialRequest(
-            executors::actions::coding_agent_initial::CodingAgentInitialRequest {
+            forge_core_executors::actions::coding_agent_initial::CodingAgentInitialRequest {
                 prompt,
                 executor_profile_id: executor_profile_id.clone(),
             },
@@ -510,7 +510,7 @@ pub async fn replace_process(
         // No prior session (e.g., replacing the first run) → start a fresh initial request
         ExecutorAction::new(
             ExecutorActionType::CodingAgentInitialRequest(
-                executors::actions::coding_agent_initial::CodingAgentInitialRequest {
+                forge_core_executors::actions::coding_agent_initial::CodingAgentInitialRequest {
                     prompt: payload.prompt.clone(),
                     executor_profile_id,
                 },
@@ -561,7 +561,7 @@ async fn handle_task_attempt_diff_ws(
     stats_only: bool,
 ) -> anyhow::Result<()> {
     use futures_util::{SinkExt, StreamExt, TryStreamExt};
-    use utils::log_msg::LogMsg;
+    use forge_core_utils::log_msg::LogMsg;
 
     let stream = deployment
         .container()
@@ -879,7 +879,7 @@ pub async fn create_github_pr(
             }
 
             // Auto-open PR in browser
-            if let Err(e) = utils::browser::open_browser(&pr_info.url).await {
+            if let Err(e) = forge_core_utils::browser::open_browser(&pr_info.url).await {
                 tracing::warn!("Failed to open PR in browser: {}", e);
             }
             deployment
@@ -1249,7 +1249,7 @@ pub async fn rebase_task_attempt(
         github_config.token(),
     );
     if let Err(e) = result {
-        use services::services::git::GitServiceError;
+        use forge_core_services::services::git::GitServiceError;
         return match e {
             GitServiceError::MergeConflicts(msg) => Ok(ResponseJson(ApiResponse::<
                 (),

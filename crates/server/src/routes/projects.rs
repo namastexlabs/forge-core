@@ -8,17 +8,17 @@ use axum::{
     response::Json as ResponseJson,
     routing::{get, post},
 };
-use db::models::project::{
+use forge_core_db::models::project::{
     CreateProject, Project, ProjectError, SearchMatchType, SearchResult, UpdateProject,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use ignore::WalkBuilder;
-use services::services::{
+use forge_core_services::services::{
     file_ranker::FileRanker,
     file_search_cache::{CacheError, SearchMode, SearchQuery},
     git::GitBranch,
 };
-use utils::{path::expand_tilde, response::ApiResponse};
+use forge_core_utils::{path::expand_tilde, response::ApiResponse};
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_project_middleware};

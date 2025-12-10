@@ -11,29 +11,10 @@ on:
 permissions:
   contents: write
 
-env:
-  RUST_TOOLCHAIN: nightly-2025-05-18
-
 jobs:
   sync-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Cache cargo-edit
-        uses: actions/cache@v3
-        id: cache-cargo-edit
-        with:
-          path: ~/.cargo/bin/cargo-set-version
-          key: cargo-edit-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Install cargo-edit
-        if: steps.cache-cargo-edit.outputs.cache-hit != 'true'
-        run: cargo install cargo-edit
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -46,8 +27,20 @@ jobs:
 
       - name: Bump version
         run: |
-          echo "🔄 Syncing forge-core to version ${{ inputs.version }}"
-          cargo set-version --workspace ${{ inputs.version }}
+          VERSION="${{ inputs.version }}"
+          echo "🔄 Syncing forge-core to version ${VERSION}"
+
+          # Update [workspace.package] version using sed (no cargo-edit dependency)
+          # All crates use version.workspace = true, so only root Cargo.toml needs updating
+          sed -i "s/^version = \"[^\"]*\"/version = \"${VERSION}\"/" Cargo.toml
+
+          # Verify the update
+          if grep -q "version = \"${VERSION}\"" Cargo.toml; then
+            echo "✅ Updated Cargo.toml to version ${VERSION}"
+          else
+            echo "❌ Failed to update Cargo.toml"
+            exit 1
+          fi
 
       - name: Commit and tag
         run: |

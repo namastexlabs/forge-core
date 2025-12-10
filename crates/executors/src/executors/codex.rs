@@ -21,7 +21,7 @@ use serde_json::Value;
 use strum_macros::AsRefStr;
 use tokio::process::Command;
 use ts_rs::TS;
-use workspace_utils::msg_store::MsgStore;
+use forge_core_utils::msg_store::MsgStore;
 
 use self::{
     client::{AppServerClient, LogWriter},

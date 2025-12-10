@@ -1,19 +1,28 @@
 [package]
-name = "server"
-version = "0.8.7-rc.12"
-edition = "2024"
-default-run = "server"
+name = "forge-core-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "HTTP server for Forge - REST API, WebSocket streaming, and MCP integration"
+
+[lib]
+name = "forge_core_server"
 
 [lints.clippy]
 uninlined-format-args = "allow"
 
 [dependencies]
-deployment = { path = "../deployment" }
-executors = { path = "../executors" }
-local-deployment = { path = "../local-deployment" }
-utils = { path = "../utils" }
-db = { path = "../db" }
-services = { path = "../services" }
+forge-core-deployment = { workspace = true }
+forge-core-executors = { workspace = true }
+forge-core-local-deployment = { workspace = true }
+forge-core-utils = { workspace = true }
+forge-core-db = { workspace = true }
+forge-core-services = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { version = "0.7", features = ["io"] }
 axum = { workspace = true }

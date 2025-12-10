@@ -4,10 +4,10 @@ use axum::{
     response::Json as ResponseJson,
     routing::get,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use serde::Deserialize;
-use services::services::filesystem::{DirectoryEntry, DirectoryListResponse, FilesystemError};
-use utils::response::ApiResponse;
+use forge_core_services::services::filesystem::{DirectoryEntry, DirectoryListResponse, FilesystemError};
+use forge_core_utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError};
 

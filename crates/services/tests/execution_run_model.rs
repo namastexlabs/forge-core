@@ -9,7 +9,7 @@
 //! Note: These tests require DATABASE_URL to be set and migrations to run.
 //! Run with: cargo test --package services --test execution_run_model
 
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         execution_run::ExecutionRun,
@@ -71,8 +71,8 @@ async fn test_execution_run_create_without_task() {
     let run_id = Uuid::new_v4();
     let branch = format!("run/{}", &run_id.to_string()[..8]);
 
-    let create_data = db::models::execution_run::CreateExecutionRun {
-        executor: executors::executors::BaseCodingAgent::ClaudeCode,
+    let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+        executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
         base_branch: "main".to_string(),
         prompt: "Test prompt".to_string(),
     };
@@ -98,8 +98,8 @@ async fn test_execution_run_find_by_id() {
     let run_id = Uuid::new_v4();
     let branch = format!("run/{}", &run_id.to_string()[..8]);
 
-    let create_data = db::models::execution_run::CreateExecutionRun {
-        executor: executors::executors::BaseCodingAgent::ClaudeCode,
+    let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+        executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
         base_branch: "main".to_string(),
         prompt: "Find me test".to_string(),
     };
@@ -131,8 +131,8 @@ async fn test_execution_run_fetch_all_with_project_filter() {
     // Create runs in project 1
     for i in 0..3 {
         let run_id = Uuid::new_v4();
-        let create_data = db::models::execution_run::CreateExecutionRun {
-            executor: executors::executors::BaseCodingAgent::ClaudeCode,
+        let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+            executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
             base_branch: "main".to_string(),
             prompt: format!("Project 1 run {i}"),
         };
@@ -150,8 +150,8 @@ async fn test_execution_run_fetch_all_with_project_filter() {
     // Create runs in project 2
     for i in 0..2 {
         let run_id = Uuid::new_v4();
-        let create_data = db::models::execution_run::CreateExecutionRun {
-            executor: executors::executors::BaseCodingAgent::ClaudeCode,
+        let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+            executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
             base_branch: "main".to_string(),
             prompt: format!("Project 2 run {i}"),
         };
@@ -190,8 +190,8 @@ async fn test_execution_run_update_container_ref() {
     let project_id = create_test_project(pool).await;
     let run_id = Uuid::new_v4();
 
-    let create_data = db::models::execution_run::CreateExecutionRun {
-        executor: executors::executors::BaseCodingAgent::ClaudeCode,
+    let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+        executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
         base_branch: "main".to_string(),
         prompt: "Container ref test".to_string(),
     };
@@ -236,8 +236,8 @@ async fn test_execution_run_mark_worktree_deleted() {
     let project_id = create_test_project(pool).await;
     let run_id = Uuid::new_v4();
 
-    let create_data = db::models::execution_run::CreateExecutionRun {
-        executor: executors::executors::BaseCodingAgent::ClaudeCode,
+    let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
+        executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
         base_branch: "main".to_string(),
         prompt: "Worktree deletion test".to_string(),
     };

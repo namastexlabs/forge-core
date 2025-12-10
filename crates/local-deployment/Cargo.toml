@@ -1,14 +1,21 @@
 [package]
-name = "local-deployment"
-version = "0.8.7-rc.12"
-edition = "2024"
+name = "forge-core-local-deployment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Local deployment implementation for Forge - manages worktrees and local task execution"
 
 [dependencies]
-db = { path = "../db" }
-executors = { path="../executors" }
-deployment = { path = "../deployment" }
-services = { path = "../services" }
-utils = { path = "../utils" }
+forge-core-db = { workspace = true }
+forge-core-executors = { workspace = true }
+forge-core-deployment = { workspace = true }
+forge-core-services = { workspace = true }
+forge-core-utils = { workspace = true }
 tokio-util = { version = "0.7", features = ["io"] }
 bytes = "1.0"
 axum = { workspace = true }

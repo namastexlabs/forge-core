@@ -14,7 +14,7 @@ use tokio_util::{
     io::ReaderStream,
 };
 use tracing::error;
-use workspace_utils::stream_lines::LinesStreamExt;
+use forge_core_utils::stream_lines::LinesStreamExt;
 
 use super::{AcpClient, SessionManager};
 use crate::{

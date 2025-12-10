@@ -16,7 +16,7 @@
 //! Total Advanced Tools: 49 additional tools
 
 use chrono::{DateTime, Utc};
-use db::models::task_attempt::TaskAttempt;
+use forge_core_db::models::task_attempt::TaskAttempt;
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

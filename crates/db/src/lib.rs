@@ -4,7 +4,7 @@ use sqlx::{
     Error, Pool, Sqlite, SqlitePool,
     sqlite::{SqliteConnectOptions, SqliteConnection, SqlitePoolOptions},
 };
-use utils::assets::asset_dir;
+use forge_core_utils::assets::asset_dir;
 
 pub mod models;
 

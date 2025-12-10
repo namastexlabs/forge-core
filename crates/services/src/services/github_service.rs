@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
-use db::models::merge::{MergeStatus, PullRequestInfo};
+use forge_core_db::models::merge::{MergeStatus, PullRequestInfo};
 use octocrab::{Octocrab, OctocrabBuilder, models::IssueState};
 use regex::Regex;
 use serde::{Deserialize, Serialize};

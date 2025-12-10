@@ -4,6 +4,6 @@ pub mod middleware;
 pub mod routes;
 
 // #[cfg(feature = "cloud")]
-// type DeploymentImpl = automagik_forge_cloud::deployment::CloudDeployment;
+// type DeploymentImpl = automagik_forge_cloud::forge_core_deployment::CloudDeployment;
 // #[cfg(not(feature = "cloud"))]
-pub type DeploymentImpl = local_deployment::LocalDeployment;
+pub type DeploymentImpl = forge_core_local_deployment::LocalDeployment;

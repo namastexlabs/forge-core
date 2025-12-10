@@ -7,7 +7,7 @@ use axum::{
     },
     routing::get,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use futures_util::TryStreamExt;
 
 use crate::DeploymentImpl;

@@ -8,7 +8,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 use ts_rs::TS;
-use utils::{assets::SoundAssets, cache_dir};
+use forge_core_utils::{assets::SoundAssets, cache_dir};
 
 use crate::services::config::versions::v1;
 
@@ -388,7 +388,7 @@ impl EditorConfig {
         let executable = {
             #[cfg(windows)]
             {
-                utils::shell::resolve_executable_path(&command[0])
+                forge_core_utils::shell::resolve_executable_path(&command[0])
                     .await
                     .ok_or_else(|| {
                         io::Error::new(

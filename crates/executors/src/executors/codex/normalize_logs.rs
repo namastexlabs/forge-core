@@ -26,7 +26,7 @@ use mcp_types::ContentBlock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use workspace_utils::{
+use forge_core_utils::{
     approvals::ApprovalStatus,
     diff::{concatenate_diff_hunks, extract_unified_diff_hunks},
     msg_store::MsgStore,

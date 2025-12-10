@@ -17,7 +17,7 @@ use crate::{
         ApiResponse,
         project::{CreateProject, Project},
     },
-    services::{
+    forge_core_services::{
         GitHubServiceError,
         git_service::GitService,
         github_service::{GitHubService, RepositoryInfo},

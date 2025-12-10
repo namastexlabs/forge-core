@@ -7,7 +7,7 @@ use std::{
 use git2::{Error as GitError, Repository};
 use thiserror::Error;
 use tracing::{debug, info};
-use utils::shell::resolve_executable_path;
+use forge_core_utils::shell::resolve_executable_path;
 
 use super::{
     git::{GitService, GitServiceError},
@@ -475,6 +475,6 @@ impl WorktreeManager {
 
     /// Get the base directory for automagik-forge worktrees
     pub fn get_worktree_base_dir() -> std::path::PathBuf {
-        utils::path::get_automagik_forge_temp_dir().join("worktrees")
+        forge_core_utils::path::get_automagik_forge_temp_dir().join("worktrees")
     }
 }

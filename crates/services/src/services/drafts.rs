@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         draft::{Draft, DraftType, UpsertDraft},
@@ -12,7 +12,7 @@ use db::{
         task_attempt::TaskAttempt,
     },
 };
-use executors::{
+use forge_core_executors::{
     actions::{
         ExecutorAction, ExecutorActionType, coding_agent_follow_up::CodingAgentFollowUpRequest,
     },
@@ -256,7 +256,7 @@ impl DraftsService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(
-                executors::actions::coding_agent_initial::CodingAgentInitialRequest {
+                forge_core_executors::actions::coding_agent_initial::CodingAgentInitialRequest {
                     prompt,
                     executor_profile_id,
                 },

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use tokio::sync::Mutex;
-use workspace_utils::approvals::ApprovalStatus;
+use forge_core_utils::approvals::ApprovalStatus;
 
 use super::types::PermissionMode;
 use crate::{

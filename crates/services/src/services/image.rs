@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use db::models::image::{CreateImage, Image};
+use forge_core_db::models::image::{CreateImage, Image};
 use regex::{Captures, Regex};
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
@@ -39,7 +39,7 @@ pub struct ImageService {
 
 impl ImageService {
     pub fn new(pool: SqlitePool) -> Result<Self, ImageError> {
-        let cache_dir = utils::cache_dir().join("images");
+        let cache_dir = forge_core_utils::cache_dir().join("images");
         fs::create_dir_all(&cache_dir)?;
         Ok(Self {
             cache_dir,
@@ -191,7 +191,7 @@ impl ImageService {
             return Ok(());
         }
 
-        let images_dir = worktree_path.join(utils::path::FORGE_IMAGES_DIR);
+        let images_dir = worktree_path.join(forge_core_utils::path::FORGE_IMAGES_DIR);
         std::fs::create_dir_all(&images_dir)?;
 
         // Create .gitignore to ignore all files in this directory
@@ -220,7 +220,7 @@ impl ImageService {
     pub fn canonicalise_image_paths(prompt: &str, worktree_path: &Path) -> String {
         let pattern = format!(
             r#"!\[([^\]]*)\]\(({}/[^)\s]+)\)"#,
-            regex::escape(utils::path::FORGE_IMAGES_DIR)
+            regex::escape(forge_core_utils::path::FORGE_IMAGES_DIR)
         );
         let re = Regex::new(&pattern).unwrap();
 

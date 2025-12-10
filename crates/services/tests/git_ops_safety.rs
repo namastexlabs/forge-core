@@ -5,7 +5,7 @@ use std::{
 };
 
 use git2::{PushOptions, Repository, build::CheckoutBuilder};
-use services::services::{
+use forge_core_services::services::{
     git::GitService,
     git_cli::{GitCli, GitCliError},
 };
@@ -72,7 +72,7 @@ fn push_ref(repo: &Repository, local: &str, remote: &str) {
         .unwrap();
 }
 
-use services::services::git::DiffTarget;
+use forge_core_services::services::git::DiffTarget;
 
 // Non-conflicting setup used by several tests
 fn setup_repo_with_worktree(root: &TempDir) -> (PathBuf, PathBuf) {

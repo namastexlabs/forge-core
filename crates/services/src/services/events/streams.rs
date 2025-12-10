@@ -1,4 +1,4 @@
-use db::models::{
+use forge_core_db::models::{
     draft::{Draft, DraftType},
     execution_process::ExecutionProcess,
     task::{Task, TaskWithAttemptStatus},
@@ -6,7 +6,7 @@ use db::models::{
 use futures::StreamExt;
 use serde_json::json;
 use tokio_stream::wrappers::BroadcastStream;
-use utils::log_msg::LogMsg;
+use forge_core_utils::log_msg::LogMsg;
 use uuid::Uuid;
 
 use super::{
@@ -344,11 +344,11 @@ impl EventService {
                                 {
                                     // Check project membership
                                     if let Ok(Some(task_attempt)) =
-                                        db::models::task_attempt::TaskAttempt::find_by_id(
+                                        forge_core_db::models::task_attempt::TaskAttempt::find_by_id(
                                             &db_pool, attempt_id,
                                         )
                                         .await
-                                        && let Ok(Some(task)) = db::models::task::Task::find_by_id(
+                                        && let Ok(Some(task)) = forge_core_db::models::task::Task::find_by_id(
                                             &db_pool,
                                             task_attempt.task_id,
                                         )

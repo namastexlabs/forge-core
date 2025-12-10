@@ -18,7 +18,7 @@ use tokio::{
 };
 use ts_rs::TS;
 use uuid::Uuid;
-use workspace_utils::{msg_store::MsgStore, path::get_automagik_forge_temp_dir};
+use forge_core_utils::{msg_store::MsgStore, path::get_automagik_forge_temp_dir};
 
 use crate::{
     command::{CmdOverrides, CommandBuilder, apply_overrides},

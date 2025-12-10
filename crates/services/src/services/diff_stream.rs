@@ -8,13 +8,13 @@ use std::{
     },
 };
 
-use executors::logs::utils::{ConversationPatch, patch::escape_json_pointer_segment};
+use forge_core_executors::logs::utils::{ConversationPatch, patch::escape_json_pointer_segment};
 use futures::StreamExt;
 use notify_debouncer_full::DebouncedEvent;
 use thiserror::Error;
 use tokio::{sync::mpsc, task::JoinHandle};
 use tokio_stream::wrappers::ReceiverStream;
-use utils::{
+use forge_core_utils::{
     diff::{self, Diff},
     log_msg::LogMsg,
 };

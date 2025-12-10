@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         merge::{Merge, MergeStatus, PrMerge},

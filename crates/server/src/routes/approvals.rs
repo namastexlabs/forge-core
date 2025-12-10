@@ -4,8 +4,8 @@ use axum::{
     http::StatusCode,
     routing::post,
 };
-use deployment::Deployment;
-use utils::approvals::{ApprovalResponse, ApprovalStatus};
+use forge_core_deployment::Deployment;
+use forge_core_utils::approvals::{ApprovalResponse, ApprovalStatus};
 
 use crate::DeploymentImpl;
 

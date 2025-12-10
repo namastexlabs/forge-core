@@ -11,7 +11,7 @@
 use std::{sync::Arc, time::Duration};
 
 use futures::StreamExt;
-use workspace_utils::msg_store::MsgStore;
+use forge_core_utils::msg_store::MsgStore;
 
 use super::{
     NormalizedEntry, NormalizedEntryError, NormalizedEntryType,

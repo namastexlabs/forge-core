@@ -11,10 +11,25 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.7-rc.12"
+version = "0.8.7-rc.24"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/namastexlabs/forge-core"
+homepage = "https://github.com/namastexlabs/forge-core"
+authors = ["Namastex Labs <team@namastexlabs.com>"]
+keywords = ["forge", "task", "execution", "agent", "ai"]
+categories = ["development-tools"]
 
 [workspace.dependencies]
+# Internal forge-core crates (for workspace inheritance)
+forge-core-utils = { path = "crates/utils" }
+forge-core-executors = { path = "crates/executors" }
+forge-core-db = { path = "crates/db" }
+forge-core-services = { path = "crates/services" }
+forge-core-deployment = { path = "crates/deployment" }
+forge-core-local-deployment = { path = "crates/local-deployment" }
+forge-core-server = { path = "crates/server" }
+
 # Forge-core dependencies
 tower-http = { version = "0.5", features = ["cors"] }
 

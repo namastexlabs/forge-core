@@ -1,4 +1,4 @@
-use db::models::{
+use forge_core_db::models::{
     draft::{Draft, DraftType},
     execution_process::ExecutionProcess,
     task::TaskWithAttemptStatus,

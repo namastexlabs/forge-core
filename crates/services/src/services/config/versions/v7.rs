@@ -1,5 +1,5 @@
 use anyhow::Error;
-use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
+use forge_core_executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 use ts_rs::TS;

@@ -9,7 +9,7 @@ use std::{
 use anyhow::anyhow;
 use async_trait::async_trait;
 use command_group::AsyncGroupChild;
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         draft::{Draft, DraftType},
@@ -25,8 +25,8 @@ use db::{
         task_attempt::TaskAttempt,
     },
 };
-use deployment::DeploymentError;
-use executors::{
+use forge_core_deployment::DeploymentError;
+use forge_core_executors::{
     actions::{Executable, ExecutorAction},
     approvals::{ExecutorApprovalService, NoopExecutorApprovalService},
     executors::BaseCodingAgent,
@@ -40,7 +40,7 @@ use executors::{
 };
 use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
 use serde_json::json;
-use services::services::{
+use forge_core_services::services::{
     analytics::AnalyticsContext,
     approvals::{Approvals, executor_approvals::ExecutorApprovalBridge},
     config::Config,
@@ -53,7 +53,7 @@ use services::services::{
 };
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_util::io::ReaderStream;
-use utils::{
+use forge_core_utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
     text::{git_branch_id, short_uuid},
@@ -388,9 +388,9 @@ impl LocalContainerService {
                         "exit_code": exit_code,
                         "executor": ctx.execution_process.executor_action().ok()
                             .and_then(|action| match &action.typ {
-                                executors::actions::ExecutorActionType::CodingAgentInitialRequest(req) =>
+                                forge_core_executors::actions::ExecutorActionType::CodingAgentInitialRequest(req) =>
                                     Some(req.executor_profile_id.executor),
-                                executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(req) =>
+                                forge_core_executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(req) =>
                                     Some(req.executor_profile_id.executor),
                                 _ => None,
                             })
@@ -577,7 +577,7 @@ impl LocalContainerService {
 
         // Merge and forward into the store
         let merged = select(out, err); // Stream<Item = Result<LogMsg, io::Error>>
-        let debounced = utils::stream_ext::debounce_logs(merged);
+        let debounced = forge_core_utils::stream_ext::debounce_logs(merged);
         store.clone().spawn_forwarder(debounced);
 
         let mut map = self.msg_stores().write().await;
@@ -1482,7 +1482,7 @@ impl LocalContainerService {
             return Ok(());
         };
 
-        use executors::actions::ExecutorActionType;
+        use forge_core_executors::actions::ExecutorActionType;
         let initial_executor_profile_id = match &latest.executor_action()?.typ {
             ExecutorActionType::CodingAgentInitialRequest(req) => req.executor_profile_id.clone(),
             ExecutorActionType::CodingAgentFollowUpRequest(req) => req.executor_profile_id.clone(),
@@ -1495,7 +1495,7 @@ impl LocalContainerService {
             }
         };
 
-        let executor_profile_id = executors::profile::ExecutorProfileId {
+        let executor_profile_id = forge_core_executors::profile::ExecutorProfileId {
             executor: initial_executor_profile_id.executor,
             variant: draft.variant.clone(),
         };
@@ -1527,14 +1527,14 @@ impl LocalContainerService {
         }
 
         let follow_up_request =
-            executors::actions::coding_agent_follow_up::CodingAgentFollowUpRequest {
+            forge_core_executors::actions::coding_agent_follow_up::CodingAgentFollowUpRequest {
                 prompt,
                 session_id,
                 executor_profile_id,
             };
 
-        let follow_up_action = executors::actions::ExecutorAction::new(
-            executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request),
+        let follow_up_action = forge_core_executors::actions::ExecutorAction::new(
+            forge_core_executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request),
             cleanup_action,
         );
 

@@ -8,18 +8,18 @@ use axum::{
     response::{Json as ResponseJson, Response},
     routing::{get, put},
 };
-use deployment::{Deployment, DeploymentError};
-use executors::{
+use forge_core_deployment::{Deployment, DeploymentError};
+use forge_core_executors::{
     executors::{BaseAgentCapability, BaseCodingAgent, StandardCodingAgentExecutor},
     mcp_config::{McpConfig, read_agent_config, write_agent_config},
     profile::{ExecutorConfigs, ExecutorProfileId},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use services::services::config::{Config, ConfigError, SoundFile, save_config_to_file};
+use forge_core_services::services::config::{Config, ConfigError, SoundFile, save_config_to_file};
 use tokio::fs;
 use ts_rs::TS;
-use utils::{assets::config_path, response::ApiResponse};
+use forge_core_utils::{assets::config_path, response::ApiResponse};
 
 use crate::{DeploymentImpl, error::ApiError};
 
@@ -103,7 +103,7 @@ async fn update_config(
     let config_path = config_path();
 
     // Validate git branch prefix
-    if !utils::git::is_valid_branch_prefix(&new_config.git_branch_prefix) {
+    if !forge_core_utils::git::is_valid_branch_prefix(&new_config.git_branch_prefix) {
         return ResponseJson(ApiResponse::error(
             "Invalid git branch prefix. Must be a valid git branch name component without slashes.",
         ));
@@ -392,7 +392,7 @@ pub struct ProfilesContent {
 async fn get_profiles(
     State(_deployment): State<DeploymentImpl>,
 ) -> ResponseJson<ApiResponse<ProfilesContent>> {
-    let profiles_path = utils::assets::profiles_path();
+    let profiles_path = forge_core_utils::assets::profiles_path();
 
     // Use cached data to ensure consistency with runtime and PUT updates
     let profiles = ExecutorConfigs::get_cached();

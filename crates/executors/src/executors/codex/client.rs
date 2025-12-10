@@ -21,7 +21,7 @@ use tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     sync::Mutex,
 };
-use workspace_utils::approvals::ApprovalStatus;
+use forge_core_utils::approvals::ApprovalStatus;
 
 use super::jsonrpc::{JsonRpcCallbacks, JsonRpcPeer};
 use crate::{

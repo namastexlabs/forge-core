@@ -1,10 +1,17 @@
 [package]
-name = "executors"
-version = "0.8.7-rc.12"
-edition = "2024"
+name = "forge-core-executors"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Task executors for the Forge framework - handles task lifecycle and execution"
 
 [dependencies]
-workspace_utils = { path = "../utils", package = "utils" }
+forge-core-utils = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { version = "0.7", features = ["io", "compat"] }
 bytes = "1.0"

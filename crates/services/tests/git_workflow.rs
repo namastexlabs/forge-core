@@ -4,12 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use services::services::{
+use forge_core_services::services::{
     git::{DiffTarget, GitService},
     github_service::{GitHubRepoInfo, GitHubServiceError},
 };
 use tempfile::TempDir;
-use utils::diff::DiffChangeKind;
+use forge_core_utils::diff::DiffChangeKind;
 
 fn write_file<P: AsRef<Path>>(base: P, rel: &str, content: &str) {
     let path = base.as_ref().join(rel);

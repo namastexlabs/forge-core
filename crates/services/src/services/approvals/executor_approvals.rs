@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use db::{self, DBService};
-use executors::approvals::{ExecutorApprovalError, ExecutorApprovalService};
+use forge_core_db::{self, DBService};
+use forge_core_executors::approvals::{ExecutorApprovalError, ExecutorApprovalService};
 use serde_json::Value;
-use utils::approvals::{ApprovalRequest, ApprovalStatus, CreateApprovalRequest};
+use forge_core_utils::approvals::{ApprovalRequest, ApprovalStatus, CreateApprovalRequest};
 use uuid::Uuid;
 
 use crate::services::approvals::Approvals;

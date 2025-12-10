@@ -9,14 +9,14 @@ use axum::{
     response::{IntoResponse, Json as ResponseJson},
     routing::{get, post},
 };
-use db::models::execution_process::{
+use forge_core_db::models::execution_process::{
     ExecutionProcess, ExecutionProcessError, ExecutionProcessStatus,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use futures_util::{SinkExt, StreamExt, TryStreamExt};
 use serde::Deserialize;
-use services::services::container::ContainerService;
-use utils::{log_msg::LogMsg, response::ApiResponse};
+use forge_core_services::services::container::ContainerService;
+use forge_core_utils::{log_msg::LogMsg, response::ApiResponse};
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_execution_process_middleware};
@@ -82,8 +82,8 @@ async fn handle_raw_logs_ws(
         atomic::{AtomicUsize, Ordering},
     };
 
-    use executors::logs::utils::patch::ConversationPatch;
-    use utils::log_msg::LogMsg;
+    use forge_core_executors::logs::utils::patch::ConversationPatch;
+    use forge_core_utils::log_msg::LogMsg;
 
     // Get the raw stream and convert to JSON patches on-the-fly
     let raw_stream = deployment

@@ -1,18 +1,18 @@
-use db::models::{
+use forge_core_db::models::{
     execution_process::{ExecutionProcess, ExecutionProcessRunReason},
     task_attempt::{TaskAttempt, TaskAttemptError},
 };
-use deployment::Deployment;
-use executors::actions::ExecutorAction;
+use forge_core_deployment::Deployment;
+use forge_core_executors::actions::ExecutorAction;
 #[cfg(unix)]
-use executors::{
+use forge_core_executors::{
     actions::{
         ExecutorActionType,
         script::{ScriptContext, ScriptRequest, ScriptRequestLanguage},
     },
     executors::cursor::CursorAgent,
 };
-use services::services::container::ContainerService;
+use forge_core_services::services::container::ContainerService;
 
 use crate::{error::ApiError, routes::task_attempts::ensure_worktree_path};
 
@@ -95,7 +95,7 @@ fi
 
     #[cfg(not(unix))]
     {
-        use executors::executors::ExecutorError::SetupHelperNotSupported;
+        use forge_core_executors::executors::ExecutorError::SetupHelperNotSupported;
         Err(ApiError::Executor(SetupHelperNotSupported))
     }
 }

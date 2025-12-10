@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-use workspace_utils::msg_store::MsgStore;
+use forge_core_utils::msg_store::MsgStore;
 
 pub use super::acp::AcpAgentHarness;
 use crate::{

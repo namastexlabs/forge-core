@@ -1,7 +1,7 @@
 use rmcp::{ServiceExt, transport::stdio};
-use server::mcp::task_server::TaskServer;
+use forge_core_server::mcp::task_server::TaskServer;
 use tracing_subscriber::{EnvFilter, prelude::*};
-use utils::{
+use forge_core_utils::{
     port_file::read_port_file,
     sentry::{self as sentry_utils, SentrySource, sentry_layer},
 };

@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncWriteExt, process::Command};
 use ts_rs::TS;
-use workspace_utils::{
+use forge_core_utils::{
     diff::{
         concatenate_diff_hunks, create_unified_diff, create_unified_diff_hunk,
         extract_unified_diff_hunks,
@@ -1174,7 +1174,7 @@ Tests
 mod tests {
     use std::sync::Arc;
 
-    use workspace_utils::msg_store::MsgStore;
+    use forge_core_utils::msg_store::MsgStore;
 
     use super::*;
 
@@ -1214,7 +1214,7 @@ mod tests {
         let history = msg_store.get_history();
         let patch_count = history
             .iter()
-            .filter(|m| matches!(m, workspace_utils::log_msg::LogMsg::JsonPatch(_)))
+            .filter(|m| matches!(m, forge_core_utils::log_msg::LogMsg::JsonPatch(_)))
             .count();
         assert!(
             patch_count >= 2,

@@ -1,14 +1,14 @@
 use axum::{Extension, Json, extract::State, response::Json as ResponseJson};
-use db::models::{
+use forge_core_db::models::{
     draft::DraftType,
     task_attempt::{TaskAttempt, TaskAttemptError},
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use serde::Deserialize;
-use services::services::drafts::{
+use forge_core_services::services::drafts::{
     DraftResponse, SetQueueRequest, UpdateFollowUpDraftRequest, UpdateRetryFollowUpDraftRequest,
 };
-use utils::response::ApiResponse;
+use forge_core_utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError};
 

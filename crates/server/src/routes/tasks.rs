@@ -12,21 +12,21 @@ use axum::{
     response::{IntoResponse, Json as ResponseJson},
     routing::{get, post},
 };
-use db::models::{
+use forge_core_db::models::{
     image::TaskImage,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus, UpdateTask},
     task_attempt::{CreateTaskAttempt, TaskAttempt},
 };
-use deployment::Deployment;
-use executors::profile::ExecutorProfileId;
+use forge_core_deployment::Deployment;
+use forge_core_executors::profile::ExecutorProfileId;
 use futures_util::{SinkExt, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
-use services::services::container::{
+use forge_core_services::services::container::{
     ContainerService, WorktreeCleanupData, cleanup_worktrees_direct,
 };
 use sqlx::Error as SqlxError;
 use ts_rs::TS;
-use utils::response::ApiResponse;
+use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_task_middleware};

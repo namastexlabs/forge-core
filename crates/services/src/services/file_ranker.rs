@@ -6,7 +6,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use db::models::project::{SearchMatchType, SearchResult};
+use forge_core_db::models::project::{SearchMatchType, SearchResult};
 use once_cell::sync::Lazy;
 use tokio::task;
 

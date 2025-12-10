@@ -6,15 +6,15 @@ use axum::{
     response::{Json as ResponseJson, Response},
     routing::{get, post},
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use octocrab::auth::Continue;
 use serde::{Deserialize, Serialize};
-use services::services::{
+use forge_core_services::services::{
     auth::{AuthError, DeviceFlowStartResponse},
     config::save_config_to_file,
     github_service::{GitHubService, GitHubServiceError},
 };
-use utils::response::ApiResponse;
+use forge_core_utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError};
 
@@ -74,7 +74,7 @@ async fn device_poll(
     };
     // Save to config
     {
-        let config_path = utils::assets::config_path();
+        let config_path = forge_core_utils::assets::config_path();
         let mut config = deployment.config().write().await;
         config.github.username = Some(user_info.username.clone());
         config.github.primary_email = user_info.primary_email.clone();

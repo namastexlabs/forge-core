@@ -1,6 +1,6 @@
-use db::models::image::TaskImage;
-use deployment::Deployment;
-use services::services::{container::ContainerService, image::ImageService};
+use forge_core_db::models::image::TaskImage;
+use forge_core_deployment::Deployment;
+use forge_core_services::services::{container::ContainerService, image::ImageService};
 use uuid::Uuid;
 
 use crate::error::ApiError;
@@ -8,7 +8,7 @@ use crate::error::ApiError;
 /// Resolve and ensure the worktree path for a task attempt.
 pub async fn ensure_worktree_path(
     deployment: &crate::DeploymentImpl,
-    attempt: &db::models::task_attempt::TaskAttempt,
+    attempt: &forge_core_db::models::task_attempt::TaskAttempt,
 ) -> Result<std::path::PathBuf, ApiError> {
     let container_ref = deployment
         .container()
@@ -21,7 +21,7 @@ pub async fn ensure_worktree_path(
 /// Returns the transformed prompt.
 pub async fn handle_images_for_prompt(
     deployment: &crate::DeploymentImpl,
-    attempt: &db::models::task_attempt::TaskAttempt,
+    attempt: &forge_core_db::models::task_attempt::TaskAttempt,
     task_id: Uuid,
     image_ids: &[Uuid],
     prompt: &str,

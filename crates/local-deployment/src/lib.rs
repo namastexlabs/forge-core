@@ -1,10 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use db::DBService;
-use deployment::{Deployment, DeploymentError};
-use executors::profile::ExecutorConfigs;
-use services::services::{
+use forge_core_db::DBService;
+use forge_core_deployment::{Deployment, DeploymentError};
+use forge_core_executors::profile::ExecutorConfigs;
+use forge_core_services::services::{
     analytics::{AnalyticsConfig, AnalyticsContext, AnalyticsService, generate_user_id},
     approvals::Approvals,
     auth::AuthService,
@@ -18,7 +18,7 @@ use services::services::{
     image::ImageService,
 };
 use tokio::sync::RwLock;
-use utils::{assets::config_path, msg_store::MsgStore};
+use forge_core_utils::{assets::config_path, msg_store::MsgStore};
 use uuid::Uuid;
 
 use crate::container::LocalContainerService;
@@ -57,7 +57,7 @@ impl Deployment for LocalDeployment {
 
         // Check if app version has changed and set release notes flag
         {
-            let current_version = utils::version::APP_VERSION;
+            let current_version = forge_core_utils::version::APP_VERSION;
             let stored_version = raw_config.last_app_version.as_deref();
 
             if stored_version != Some(current_version) {

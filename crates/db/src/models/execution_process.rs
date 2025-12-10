@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use executors::{
+use forge_core_executors::{
     actions::{ExecutorAction, ExecutorActionType},
     profile::ExecutorProfileId,
 };

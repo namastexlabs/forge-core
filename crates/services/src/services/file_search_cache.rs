@@ -5,7 +5,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use db::models::project::{SearchMatchType, SearchResult};
+use forge_core_db::models::project::{SearchMatchType, SearchResult};
 use fst::{Map, MapBuilder};
 use ignore::WalkBuilder;
 use moka::future::Cache;
@@ -174,7 +174,7 @@ impl FileSearchCache {
 
     /// Pre-warm cache for most active projects
     pub async fn warm_most_active(&self, db_pool: &SqlitePool, limit: i32) -> Result<(), String> {
-        use db::models::project::Project;
+        use forge_core_db::models::project::Project;
 
         info!("Starting file search cache warming...");
 

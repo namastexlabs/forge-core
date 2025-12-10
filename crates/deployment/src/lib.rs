@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use axum::response::sse::Event;
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
@@ -12,11 +12,11 @@ use db::{
         task_attempt::{TaskAttempt, TaskAttemptError},
     },
 };
-use executors::executors::ExecutorError;
+use forge_core_executors::executors::ExecutorError;
 use futures::{StreamExt, TryStreamExt};
 use git2::Error as Git2Error;
 use serde_json::Value;
-use services::services::{
+use forge_core_services::services::{
     analytics::{AnalyticsContext, AnalyticsService},
     approvals::Approvals,
     auth::{AuthError, AuthService},
@@ -35,7 +35,7 @@ use services::services::{
 use sqlx::{Error as SqlxError, types::Uuid};
 use thiserror::Error;
 use tokio::sync::RwLock;
-use utils::{msg_store::MsgStore, sentry as sentry_utils};
+use forge_core_utils::{msg_store::MsgStore, sentry as sentry_utils};
 
 #[derive(Debug, Error)]
 pub enum DeploymentError {

@@ -5,7 +5,7 @@ use std::{
 };
 
 use git2::Repository;
-use services::services::{
+use forge_core_services::services::{
     git::GitService,
     git_cli::{GitCli, GitCliError},
 };

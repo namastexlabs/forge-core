@@ -2,7 +2,7 @@
 mod filesystem_tests {
     use std::{fs, path::Path};
 
-    use services::services::filesystem::FilesystemService;
+    use forge_core_services::services::filesystem::FilesystemService;
     use tempfile::TempDir;
 
     /// Helper function to create a directory structure

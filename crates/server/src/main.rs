@@ -1,11 +1,11 @@
 use anyhow::{self, Error as AnyhowError};
-use deployment::{Deployment, DeploymentError};
-use server::{DeploymentImpl, routes};
+use forge_core_deployment::{Deployment, DeploymentError};
+use forge_core_server::{DeploymentImpl, routes};
 use sqlx::Error as SqlxError;
 use strip_ansi_escapes::strip;
 use thiserror::Error;
 use tracing_subscriber::{EnvFilter, prelude::*};
-use utils::{
+use forge_core_utils::{
     assets::asset_dir,
     browser::open_browser,
     port_file::write_port_file,

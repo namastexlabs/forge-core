@@ -8,13 +8,13 @@ use axum::{
     response::{IntoResponse, Json as ResponseJson},
     routing::{get, post},
 };
-use db::models::{
+use forge_core_db::models::{
     execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
     execution_run::{CreateExecutionRun, ExecutionRun},
     project::Project,
 };
-use deployment::Deployment;
-use executors::{
+use forge_core_deployment::Deployment;
+use forge_core_executors::{
     actions::{
         ExecutorAction, ExecutorActionType, coding_agent_follow_up::CodingAgentFollowUpRequest,
         coding_agent_initial::CodingAgentInitialRequest,
@@ -22,10 +22,10 @@ use executors::{
     profile::ExecutorProfileId,
 };
 use serde::{Deserialize, Serialize};
-use services::services::container::ContainerService;
+use forge_core_services::services::container::ContainerService;
 use sqlx::Error as SqlxError;
 use ts_rs::TS;
-use utils::response::ApiResponse;
+use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_execution_run_middleware};
@@ -216,7 +216,7 @@ async fn handle_logs_ws(
     execution_run: ExecutionRun,
 ) -> anyhow::Result<()> {
     use futures_util::{SinkExt, StreamExt, TryStreamExt};
-    use utils::log_msg::LogMsg;
+    use forge_core_utils::log_msg::LogMsg;
 
     let stream = deployment
         .container()

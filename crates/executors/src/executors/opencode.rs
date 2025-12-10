@@ -16,7 +16,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncWriteExt, process::Command};
 use ts_rs::TS;
-use workspace_utils::{msg_store::MsgStore, path::make_path_relative};
+use forge_core_utils::{msg_store::MsgStore, path::make_path_relative};
 
 use crate::{
     command::{CmdOverrides, CommandBuilder, apply_overrides},

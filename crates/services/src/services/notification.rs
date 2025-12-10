@@ -1,7 +1,6 @@
 use std::sync::OnceLock;
 
-use db::models::execution_process::{ExecutionContext, ExecutionProcessStatus};
-use utils;
+use forge_core_db::models::execution_process::{ExecutionContext, ExecutionProcessStatus};
 
 use crate::services::config::SoundFile;
 
@@ -72,7 +71,7 @@ impl NotificationService {
             let _ = tokio::process::Command::new("afplay")
                 .arg(&file_path)
                 .spawn();
-        } else if cfg!(target_os = "linux") && !utils::is_wsl2() {
+        } else if cfg!(target_os = "linux") && !forge_core_utils::is_wsl2() {
             // Try different Linux audio players
             if tokio::process::Command::new("paplay")
                 .arg(&file_path)
@@ -93,9 +92,9 @@ impl NotificationService {
                     .arg("\\a")
                     .spawn();
             }
-        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && utils::is_wsl2()) {
+        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2()) {
             // Convert WSL path to Windows path if in WSL2
-            let file_path = if utils::is_wsl2() {
+            let file_path = if forge_core_utils::is_wsl2() {
                 if let Some(windows_path) = Self::wsl_to_windows_path(&file_path).await {
                     windows_path
                 } else {
@@ -118,9 +117,9 @@ impl NotificationService {
     async fn send_push_notification(title: &str, message: &str) {
         if cfg!(target_os = "macos") {
             Self::send_macos_notification(title, message).await;
-        } else if cfg!(target_os = "linux") && !utils::is_wsl2() {
+        } else if cfg!(target_os = "linux") && !forge_core_utils::is_wsl2() {
             Self::send_linux_notification(title, message).await;
-        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && utils::is_wsl2()) {
+        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2()) {
             Self::send_windows_notification(title, message).await;
         }
     }
@@ -161,7 +160,7 @@ impl NotificationService {
 
     /// Send Windows/WSL notification using PowerShell toast script
     async fn send_windows_notification(title: &str, message: &str) {
-        let script_path = match utils::get_powershell_script().await {
+        let script_path = match forge_core_utils::get_powershell_script().await {
             Ok(path) => path,
             Err(e) => {
                 tracing::error!("Failed to get PowerShell script: {}", e);
@@ -170,7 +169,7 @@ impl NotificationService {
         };
 
         // Convert WSL path to Windows path if in WSL2
-        let script_path_str = if utils::is_wsl2() {
+        let script_path_str = if forge_core_utils::is_wsl2() {
             if let Some(windows_path) = Self::wsl_to_windows_path(&script_path).await {
                 windows_path
             } else {

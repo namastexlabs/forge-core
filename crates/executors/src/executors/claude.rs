@@ -12,7 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 use ts_rs::TS;
-use workspace_utils::{
+use forge_core_utils::{
     approvals::ApprovalStatus,
     diff::{concatenate_diff_hunks, create_unified_diff, create_unified_diff_hunk},
     log_msg::LogMsg,
@@ -1963,7 +1963,7 @@ mod tests {
     async fn test_streaming_patch_generation() {
         use std::sync::Arc;
 
-        use workspace_utils::msg_store::MsgStore;
+        use forge_core_utils::msg_store::MsgStore;
 
         let executor = ClaudeCode {
             claude_code_router: Some(false),
@@ -1998,7 +1998,7 @@ mod tests {
         let history = msg_store.get_history();
         let patch_count = history
             .iter()
-            .filter(|msg| matches!(msg, workspace_utils::log_msg::LogMsg::JsonPatch(_)))
+            .filter(|msg| matches!(msg, forge_core_utils::log_msg::LogMsg::JsonPatch(_)))
             .count();
         assert!(
             patch_count > 0,

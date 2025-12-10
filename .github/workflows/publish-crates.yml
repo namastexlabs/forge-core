@@ -1,0 +1,148 @@
+name: Publish to crates.io (Stable Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable version to publish (e.g., 0.8.7)'
+        required: true
+        type: string
+
+  push:
+    tags:
+      # Only trigger on stable version tags (v0.8.7, v0.9.0, etc.)
+      # NOT on RC tags (v0.8.7-rc.24)
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  validate-stable:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+    steps:
+      - name: Extract and validate version
+        id: extract
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            # Extract from tag (remove 'v' prefix)
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+
+          # Reject RC, alpha, beta versions
+          if [[ "$VERSION" == *"-rc"* ]] || [[ "$VERSION" == *"-alpha"* ]] || [[ "$VERSION" == *"-beta"* ]]; then
+            echo "ERROR: Only stable versions allowed. Got: $VERSION"
+            echo "RC versions should be published via git tags only."
+            exit 1
+          fi
+
+          echo "Publishing version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: validate-stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Update version in Cargo.toml files
+        run: |
+          VERSION="${{ needs.validate-stable.outputs.version }}"
+          echo "Setting version to $VERSION in workspace Cargo.toml"
+
+          # Update workspace version
+          sed -i "s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+
+          # Verify the change
+          grep "^version = " Cargo.toml
+
+      - name: Verify build
+        run: cargo check --workspace
+
+      - name: Check if crates already published
+        id: check-published
+        run: |
+          VERSION="${{ needs.validate-stable.outputs.version }}"
+          CRATES="forge-core-utils forge-core-executors forge-core-db forge-core-services forge-core-deployment forge-core-local-deployment forge-core-server"
+
+          for crate in $CRATES; do
+            RESULT=$(cargo search "$crate" 2>/dev/null | grep "^$crate = " || echo "")
+            if [ -n "$RESULT" ]; then
+              PUBLISHED=$(echo "$RESULT" | sed 's/.*= "\([^"]*\)".*/\1/')
+              if [ "$PUBLISHED" == "$VERSION" ]; then
+                echo "SKIP: $crate@$VERSION already published"
+              else
+                echo "INFO: $crate currently at $PUBLISHED, will publish $VERSION"
+              fi
+            else
+              echo "NEW: $crate not yet on crates.io"
+            fi
+          done
+
+      - name: Publish crates (topological order)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -e  # Exit on any failure
+
+          publish_crate() {
+            local crate=$1
+            echo "=== Publishing $crate ==="
+
+            # Check if already published
+            RESULT=$(cargo search "$crate" 2>/dev/null | grep "^$crate = " || echo "")
+            if [ -n "$RESULT" ]; then
+              PUBLISHED=$(echo "$RESULT" | sed 's/.*= "\([^"]*\)".*/\1/')
+              if [ "$PUBLISHED" == "${{ needs.validate-stable.outputs.version }}" ]; then
+                echo "Skipping $crate - already published at version $PUBLISHED"
+                return 0
+              fi
+            fi
+
+            cargo publish -p "$crate" --allow-dirty || {
+              echo "ERROR: Failed to publish $crate"
+              exit 1
+            }
+
+            echo "Waiting 45s for crates.io index update..."
+            sleep 45
+          }
+
+          # Publish in dependency order (leaves first)
+          publish_crate forge-core-utils
+          publish_crate forge-core-executors
+          publish_crate forge-core-db
+          publish_crate forge-core-services
+          publish_crate forge-core-deployment
+          publish_crate forge-core-local-deployment
+          publish_crate forge-core-server
+
+          echo "=== All crates published successfully! ==="
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ needs.validate-stable.outputs.version }}
+          body: |
+            ## Published to crates.io
+
+            All forge-core crates are now available on crates.io:
+
+            ```toml
+            forge-core-utils = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-executors = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-db = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-services = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-deployment = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-local-deployment = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-server = "${{ needs.validate-stable.outputs.version }}"
+            ```
+          generate_release_notes: true

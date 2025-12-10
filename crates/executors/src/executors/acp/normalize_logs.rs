@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use tracing::debug;
-use workspace_utils::msg_store::MsgStore;
+use forge_core_utils::msg_store::MsgStore;
 
 pub use super::AcpAgentHarness;
 use super::AcpEvent;
@@ -436,7 +436,7 @@ pub fn normalize_logs(msg_store: Arc<MsgStore>, worktree_path: &Path) {
                             content: diff.new_text.clone(),
                         });
                     } else {
-                        let unified = workspace_utils::diff::create_unified_diff(
+                        let unified = forge_core_utils::diff::create_unified_diff(
                             &rel,
                             old_text,
                             &diff.new_text,
@@ -554,7 +554,7 @@ impl PartialToolCallData {
         }
         if !tc.locations.is_empty() {
             self.path = tc.locations.first().map(|l| {
-                PathBuf::from(workspace_utils::path::make_path_relative(
+                PathBuf::from(forge_core_utils::path::make_path_relative(
                     &l.path.to_string_lossy(),
                     &worktree_path.to_string_lossy(),
                 ))

@@ -4,11 +4,11 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use db::models::{
+use forge_core_db::models::{
     execution_process::ExecutionProcess, execution_run::ExecutionRun, project::Project, tag::Tag,
     task::Task, task_attempt::TaskAttempt,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use uuid::Uuid;
 
 use crate::DeploymentImpl;

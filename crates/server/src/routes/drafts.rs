@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use deployment::Deployment;
+use forge_core_deployment::Deployment;
 use futures_util::{SinkExt, StreamExt, TryStreamExt};
 use serde::Deserialize;
 use uuid::Uuid;

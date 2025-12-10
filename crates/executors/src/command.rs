@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
-use workspace_utils::shell::resolve_executable_path;
+use forge_core_utils::shell::resolve_executable_path;
 
 use crate::executors::ExecutorError;
 

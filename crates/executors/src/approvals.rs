@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
-use workspace_utils::approvals::ApprovalStatus;
+use forge_core_utils::approvals::ApprovalStatus;
 
 /// Errors emitted by executor approval services.
 #[derive(Debug, Error)]

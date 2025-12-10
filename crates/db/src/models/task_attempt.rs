@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use executors::executors::BaseCodingAgent;
+use forge_core_executors::executors::BaseCodingAgent;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool, Type};
 use thiserror::Error;

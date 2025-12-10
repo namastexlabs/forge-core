@@ -1,6 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
-use db::{
+use forge_core_db::{
     DBService,
     models::{
         draft::{Draft, DraftType},
@@ -12,7 +12,7 @@ use db::{
 use serde_json::json;
 use sqlx::{Error as SqlxError, Sqlite, SqlitePool, decode::Decode, sqlite::SqliteOperation};
 use tokio::sync::RwLock;
-use utils::msg_store::MsgStore;
+use forge_core_utils::msg_store::MsgStore;
 use uuid::Uuid;
 
 #[path = "events/patches.rs"]

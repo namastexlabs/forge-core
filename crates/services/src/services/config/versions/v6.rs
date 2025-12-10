@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
 use anyhow::Error;
-use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
+use forge_core_executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-use utils;
 pub use v5::{EditorConfig, EditorType, GitHubConfig, NotificationConfig, SoundFile, ThemeMode};
 
 use crate::services::config::versions::v5;
@@ -53,7 +52,7 @@ impl Config {
         };
 
         // Backup custom profiles.json if it exists (v6 migration may break compatibility)
-        let profiles_path = utils::assets::profiles_path();
+        let profiles_path = forge_core_utils::assets::profiles_path();
         if profiles_path.exists() {
             let backup_name = format!(
                 "profiles_v5_backup_{}.json",
