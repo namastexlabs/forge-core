@@ -16,7 +16,7 @@ edition = "2024"
 license = "MIT"
 repository = "https://github.com/namastexlabs/forge-core"
 homepage = "https://github.com/namastexlabs/forge-core"
-authors = ["Namastex Labs <team@namastexlabs.com>"]
+authors = ["Namastex Labs <genie@namastex.ai>"]
 keywords = ["forge", "task", "execution", "agent", "ai"]
 categories = ["development-tools"]
 
