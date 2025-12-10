@@ -25,38 +25,69 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version
+      - name: Check and bump version
+        id: bump
         run: |
           VERSION="${{ inputs.version }}"
-          echo "🔄 Syncing forge-core to version ${VERSION}"
+          TAG="v${VERSION}"
 
-          # Update [workspace.package] version using sed (no cargo-edit dependency)
-          # All crates use version.workspace = true, so only root Cargo.toml needs updating
+          # Check current version
+          CURRENT=$(grep -oP '^version = "\K[^"]+' Cargo.toml || echo "unknown")
+          echo "Current version: $CURRENT"
+          echo "Target version: $VERSION"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Tag $TAG already exists"
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if version needs update
+          if [ "$CURRENT" = "$VERSION" ]; then
+            echo "⚠️ Version already at $VERSION, no update needed"
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Update version
           sed -i "s/^version = \"[^\"]*\"/version = \"${VERSION}\"/" Cargo.toml
 
-          # Verify the update
+          # Verify update
           if grep -q "version = \"${VERSION}\"" Cargo.toml; then
-            echo "✅ Updated Cargo.toml to version ${VERSION}"
+            echo "✅ Updated Cargo.toml: $CURRENT → $VERSION"
+            echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "❌ Failed to update Cargo.toml"
             exit 1
           fi
 
       - name: Commit and tag
+        if: steps.bump.outputs.changed == 'true'
         run: |
           VERSION="${{ inputs.version }}"
           TAG="v${VERSION}"
 
-          git add -A
-          git commit -m "chore: sync version to ${VERSION} from automagik-forge" || echo "Nothing to commit"
-
-          # Create annotated tag
+          git add Cargo.toml
+          git commit -m "chore: sync version to ${VERSION} from automagik-forge"
           git tag -a "${TAG}" -m "Release ${TAG} (synced from automagik-forge)"
 
-          echo "✅ Created tag ${TAG}"
+          echo "✅ Created commit and tag ${TAG}"
 
       - name: Push changes and tag
+        if: steps.bump.outputs.changed == 'true'
         run: |
           git push origin main
           git push origin --tags
-          echo "✅ Pushed changes and tag to origin"
+          echo "✅ Pushed to origin"
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.bump.outputs.changed }}" = "true" ]; then
+            echo "## ✅ Version Synced" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tag**: v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ℹ️ No Changes" >> $GITHUB_STEP_SUMMARY
+            echo "forge-core already at version ${{ inputs.version }} or tag exists" >> $GITHUB_STEP_SUMMARY
+          fi
