@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use command_group::AsyncCommandGroup;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::shell::get_shell_command;
 
 use crate::{

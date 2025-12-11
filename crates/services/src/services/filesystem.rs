@@ -8,7 +8,7 @@ use ignore::WalkBuilder;
 use serde::Serialize;
 use thiserror::Error;
 use tokio_util::sync::CancellationToken;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 #[derive(Clone)]
 pub struct FilesystemService {}

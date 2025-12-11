@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 pub struct ApiResponse<T, E = T> {

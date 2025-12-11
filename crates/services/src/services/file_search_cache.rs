@@ -16,7 +16,7 @@ use sqlx::SqlitePool;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 use super::{
     file_ranker::{FileRanker, FileStats},

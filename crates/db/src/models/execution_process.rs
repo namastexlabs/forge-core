@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{FromRow, SqlitePool, Type};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 use super::{task::Task, task_attempt::TaskAttempt};

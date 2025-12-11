@@ -8,7 +8,7 @@ use axum::{
 use forge_core_db::models::tag::{CreateTag, Tag, UpdateTag};
 use forge_core_deployment::Deployment;
 use serde::Deserialize;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_tag_middleware};

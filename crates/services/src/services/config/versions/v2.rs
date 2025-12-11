@@ -7,7 +7,7 @@ use std::{
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::{assets::SoundAssets, cache_dir};
 
 use crate::services::config::versions::v1;

@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::approvals::ApprovalStatus;
 
 pub mod plain_text_processor;

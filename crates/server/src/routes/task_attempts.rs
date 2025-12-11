@@ -42,7 +42,7 @@ use forge_core_services::services::{
     github_service::{CreatePrRequest, GitHubService, GitHubServiceError},
 };
 use sqlx::Error as SqlxError;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
@@ -131,7 +131,7 @@ pub async fn get_task_attempt(
     Ok(ResponseJson(ApiResponse::success(task_attempt)))
 }
 
-#[derive(Debug, Serialize, Deserialize, ts_rs::TS)]
+#[derive(Debug, Serialize, Deserialize, ts_rs_forge::TS)]
 pub struct CreateTaskAttemptBody {
     pub task_id: Uuid,
     /// Executor profile specification

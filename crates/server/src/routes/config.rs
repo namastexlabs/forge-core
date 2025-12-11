@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use forge_core_services::services::config::{Config, ConfigError, SoundFile, save_config_to_file};
 use tokio::fs;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::{assets::config_path, response::ApiResponse};
 
 use crate::{DeploymentImpl, error::ApiError};

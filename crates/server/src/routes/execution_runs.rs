@@ -24,7 +24,7 @@ use forge_core_executors::{
 use serde::{Deserialize, Serialize};
 use forge_core_services::services::container::ContainerService;
 use sqlx::Error as SqlxError;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 

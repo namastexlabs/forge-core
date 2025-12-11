@@ -268,7 +268,7 @@ pub struct OpenEditorRequest {
     editor_type: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, ts_rs::TS)]
+#[derive(Debug, serde::Serialize, ts_rs_forge::TS)]
 pub struct OpenEditorResponse {
     pub url: Option<String>,
 }

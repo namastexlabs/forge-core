@@ -19,7 +19,7 @@ use forge_core_services::services::{
 use thiserror::Error;
 use forge_core_utils::response::ApiResponse;
 
-#[derive(Debug, Error, ts_rs::TS)]
+#[derive(Debug, Error, ts_rs_forge::TS)]
 #[ts(type = "string")]
 pub enum ApiError {
     #[error(transparent)]

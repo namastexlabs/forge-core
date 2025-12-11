@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 // Structs compatable with props: https://github.com/MrWangJustToDo/git-diff-view
 

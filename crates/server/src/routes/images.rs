@@ -17,7 +17,7 @@ use forge_core_services::services::image::ImageError;
 use sqlx::Error as SqlxError;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 

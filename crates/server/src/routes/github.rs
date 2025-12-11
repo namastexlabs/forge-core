@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
 };
 use serde::Deserialize;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 use crate::{

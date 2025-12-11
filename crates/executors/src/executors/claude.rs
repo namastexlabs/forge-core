@@ -11,7 +11,7 @@ use futures::StreamExt;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::{
     approvals::ApprovalStatus,
     diff::{concatenate_diff_hunks, create_unified_diff, create_unified_diff_hunk},

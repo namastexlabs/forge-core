@@ -10,7 +10,7 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::RwLock;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 #[derive(Clone)]
 pub struct AuthService {

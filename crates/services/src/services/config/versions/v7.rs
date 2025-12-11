@@ -2,7 +2,7 @@ use anyhow::Error;
 use forge_core_executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 pub use v6::{EditorConfig, EditorType, GitHubConfig, NotificationConfig, SoundFile, UiLanguage};
 
 use crate::services::config::versions::v6;

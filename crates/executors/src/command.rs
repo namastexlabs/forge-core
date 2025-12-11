@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::shell::resolve_executable_path;
 
 use crate::executors::ExecutorError;

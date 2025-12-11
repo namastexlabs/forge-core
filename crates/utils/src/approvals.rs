@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 pub const APPROVAL_TIMEOUT_SECONDS: i64 = 3600; // 1 hour

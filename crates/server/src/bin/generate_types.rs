@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, fs, path::Path};
 
 use schemars::{JsonSchema, Schema, SchemaGenerator, generate::SchemaSettings};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 fn generate_types_content() -> String {
     // 4. Friendly banner

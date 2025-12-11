@@ -22,7 +22,7 @@ toml = "0.8"
 tracing-subscriber = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-ts-rs = { workspace = true }
+ts-rs-forge = { workspace = true }
 schemars = { workspace = true }
 dirs = "5.0"
 xdg = "3.0"

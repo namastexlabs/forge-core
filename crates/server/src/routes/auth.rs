@@ -37,7 +37,7 @@ async fn device_start(
     Ok(ResponseJson(ApiResponse::success(device_start_response)))
 }
 
-#[derive(Serialize, Deserialize, ts_rs::TS)]
+#[derive(Serialize, Deserialize, ts_rs_forge::TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[ts(use_ts_enum)]
 pub enum DevicePollStatus {
@@ -46,7 +46,7 @@ pub enum DevicePollStatus {
     Success,
 }
 
-#[derive(Serialize, Deserialize, ts_rs::TS)]
+#[derive(Serialize, Deserialize, ts_rs_forge::TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[ts(use_ts_enum)]
 pub enum CheckTokenResponse {

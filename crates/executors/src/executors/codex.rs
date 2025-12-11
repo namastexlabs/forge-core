@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use strum_macros::AsRefStr;
 use tokio::process::Command;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::msg_store::MsgStore;
 
 use self::{

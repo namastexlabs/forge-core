@@ -7,7 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::info;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 use crate::services::{git::GitServiceError, git_cli::GitCliError};
 

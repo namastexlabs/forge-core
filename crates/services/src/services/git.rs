@@ -7,7 +7,7 @@ use git2::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::diff::{Diff, DiffChangeKind, FileDiffDetails};
 
 // Import for file ranking functionality

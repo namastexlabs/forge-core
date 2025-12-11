@@ -3,7 +3,7 @@ use forge_core_executors::executors::BaseCodingAgent;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 use super::project::Project;

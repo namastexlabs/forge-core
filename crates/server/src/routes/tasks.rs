@@ -25,7 +25,7 @@ use forge_core_services::services::container::{
     ContainerService, WorktreeCleanupData, cleanup_worktrees_direct,
 };
 use sqlx::Error as SqlxError;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 

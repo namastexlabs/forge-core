@@ -16,7 +16,7 @@ use tokio::{
     process::Command,
     time::{interval, timeout},
 };
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 use forge_core_utils::{msg_store::MsgStore, path::get_automagik_forge_temp_dir};
 

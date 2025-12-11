@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tokio::fs;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 use crate::executors::{CodingAgent, ExecutorError};
 

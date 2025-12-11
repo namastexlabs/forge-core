@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Error as SqlxError;
 use strum_macros::{Display, EnumString};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 #[derive(Debug, Error)]

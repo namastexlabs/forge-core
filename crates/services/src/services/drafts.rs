@@ -21,7 +21,7 @@ use forge_core_executors::{
 use serde::{Deserialize, Serialize};
 use sqlx::Error as SqlxError;
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use uuid::Uuid;
 
 use super::{

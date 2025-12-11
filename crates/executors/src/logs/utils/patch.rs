@@ -1,7 +1,7 @@
 use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_value, json, to_value};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::diff::Diff;
 
 use crate::logs::NormalizedEntry;

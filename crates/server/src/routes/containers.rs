@@ -7,7 +7,7 @@ use axum::{
 use forge_core_db::models::task_attempt::TaskAttempt;
 use forge_core_deployment::Deployment;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs_forge::TS;
 use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 

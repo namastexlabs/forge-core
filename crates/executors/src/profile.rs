@@ -4,7 +4,7 @@ use convert_case::{Case, Casing};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, de::Error as DeError};
 use thiserror::Error;
-use ts_rs::TS;
+use ts_rs_forge::TS;
 
 use crate::executors::{BaseCodingAgent, CodingAgent, StandardCodingAgentExecutor};
 
