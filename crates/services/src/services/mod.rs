@@ -5,6 +5,8 @@ pub mod commit_message_generator;
 pub mod commit_validator;
 pub mod config;
 pub mod container;
+pub mod forge_config;
+pub mod omni;
 pub mod diff_stream;
 pub mod drafts;
 pub mod events;
