@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id!: Uuid\",\n                execution_process_id as \"execution_process_id!: Uuid\",\n                session_id,\n                prompt,\n                summary,\n                commit_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM executor_sessions\n               WHERE id = $1",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id: Uuid\",\n                execution_process_id as \"execution_process_id!: Uuid\",\n                session_id,\n                prompt,\n                summary,\n                commit_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM executor_sessions\n               WHERE session_id = ?\n               ORDER BY updated_at DESC\n               LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Blob"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_attempt_id: Uuid",
         "ordinal": 1,
         "type_info": "Blob"
       },
@@ -54,7 +54,7 @@
     },
     "nullable": [
       true,
-      false,
+      true,
       false,
       true,
       true,
@@ -64,5 +64,5 @@
       false
     ]
   },
-  "hash": "93a0abf7a68c65f2f4df838d2b05f64b3280e96f6350a0d473bb56080fb5dbbf"
+  "hash": "dab024841e54119c9e5aceeaef2f48d95854734e9dc105ec86a3fc01fd588535"
 }

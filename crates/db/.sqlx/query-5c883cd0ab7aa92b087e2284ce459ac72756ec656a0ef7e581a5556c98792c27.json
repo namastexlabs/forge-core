@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT ep.id as \"id!: Uuid\", ep.task_attempt_id as \"task_attempt_id!: Uuid\", ep.run_reason as \"run_reason!: ExecutionProcessRunReason\", ep.executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\",\n                      ep.before_head_commit, ep.after_head_commit, ep.status as \"status!: ExecutionProcessStatus\", ep.exit_code,\n                      ep.dropped, ep.started_at as \"started_at!: DateTime<Utc>\", ep.completed_at as \"completed_at?: DateTime<Utc>\", ep.created_at as \"created_at!: DateTime<Utc>\", ep.updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM execution_processes ep\n               JOIN task_attempts ta ON ep.task_attempt_id = ta.id\n               JOIN tasks t ON ta.task_id = t.id\n               WHERE ep.status = 'running' AND ep.run_reason = 'devserver' AND t.project_id = ?\n               ORDER BY ep.created_at ASC",
+  "query": "SELECT id as \"id!: Uuid\", task_attempt_id as \"task_attempt_id: Uuid\", execution_run_id as \"execution_run_id: Uuid\", run_reason as \"run_reason!: ExecutionProcessRunReason\", executor_action as \"executor_action!: sqlx::types::Json<ExecutorActionField>\", before_head_commit,\n                      after_head_commit, status as \"status!: ExecutionProcessStatus\", exit_code, dropped, started_at as \"started_at!: DateTime<Utc>\", completed_at as \"completed_at?: DateTime<Utc>\",\n                      created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM execution_processes\n               WHERE task_attempt_id = ? AND run_reason = ? AND dropped = FALSE\n               ORDER BY created_at DESC LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -9,72 +9,78 @@
         "type_info": "Blob"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_attempt_id: Uuid",
         "ordinal": 1,
         "type_info": "Blob"
       },
       {
-        "name": "run_reason!: ExecutionProcessRunReason",
+        "name": "execution_run_id: Uuid",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Blob"
       },
       {
-        "name": "executor_action!: sqlx::types::Json<ExecutorActionField>",
+        "name": "run_reason!: ExecutionProcessRunReason",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "before_head_commit",
+        "name": "executor_action!: sqlx::types::Json<ExecutorActionField>",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "after_head_commit",
+        "name": "before_head_commit",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "status!: ExecutionProcessStatus",
+        "name": "after_head_commit",
         "ordinal": 6,
         "type_info": "Text"
       },
       {
-        "name": "exit_code",
+        "name": "status!: ExecutionProcessStatus",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "exit_code",
+        "ordinal": 8,
         "type_info": "Integer"
       },
       {
         "name": "dropped",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Bool"
       },
       {
         "name": "started_at!: DateTime<Utc>",
-        "ordinal": 9,
-        "type_info": "Text"
-      },
-      {
-        "name": "completed_at?: DateTime<Utc>",
         "ordinal": 10,
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "completed_at?: DateTime<Utc>",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "updated_at!: DateTime<Utc>",
+        "name": "created_at!: DateTime<Utc>",
         "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 13,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       true,
-      false,
+      true,
+      true,
       false,
       false,
       true,
@@ -88,5 +94,5 @@
       false
     ]
   },
-  "hash": "fca50b239a422f932269dea68cebc63735a341ec0a154ad7610ad9d65559aaaa"
+  "hash": "5c883cd0ab7aa92b087e2284ce459ac72756ec656a0ef7e581a5556c98792c27"
 }

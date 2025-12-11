@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE projects SET name = $2, git_repo_path = $3, setup_script = $4, dev_script = $5, cleanup_script = $6, copy_files = $7 WHERE id = $1 RETURNING id as \"id!: Uuid\", name, git_repo_path, setup_script, dev_script, cleanup_script, copy_files, created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT id as \"id!: Uuid\", name, git_repo_path, setup_script, dev_script, cleanup_script, copy_files, commit_prompt, created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\" FROM projects ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -39,18 +39,23 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "commit_prompt",
         "ordinal": 7,
         "type_info": "Text"
       },
       {
-        "name": "updated_at!: DateTime<Utc>",
+        "name": "created_at!: DateTime<Utc>",
         "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 7
+      "Right": 0
     },
     "nullable": [
       true,
@@ -60,9 +65,10 @@
       true,
       true,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "283a8ef6493346c9ee3bf649e977849eb361d801cdfc8180a8f082269a6bd649"
+  "hash": "87dbcdf3dc85ba5e34a63769c08ef323ffa50630517742bf81f027d5ebb29bdb"
 }

@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT er.id AS \"id!: Uuid\",\n                      er.project_id AS \"project_id!: Uuid\",\n                      er.branch,\n                      er.target_branch,\n                      er.executor AS \"executor!\",\n                      er.container_ref,\n                      er.prompt,\n                      er.worktree_deleted AS \"worktree_deleted!: bool\",\n                      er.created_at AS \"created_at!: DateTime<Utc>\",\n                      er.updated_at AS \"updated_at!: DateTime<Utc>\"\n               FROM execution_runs er\n               JOIN projects p ON er.project_id = p.id\n               WHERE er.id = $1 AND p.id = $2",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "project_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Blob"
+      },
+      {
+        "name": "branch",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_branch",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "executor!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "container_ref",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "prompt",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "worktree_deleted!: bool",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "888f133eb8d9a03fe8bc98a6c750f2421c2fe8a3199b5966b42091a3c609b3cc"
+}
