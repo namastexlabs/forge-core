@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Database layer for Forge - SQLite-based persistence for tasks, attempts, and state"
+include = ["src/**/*", "migrations/**/*", ".sqlx/**/*", "Cargo.toml"]
 
 [dependencies]
 forge-core-utils = { workspace = true }

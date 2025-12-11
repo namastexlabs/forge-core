@@ -33,9 +33,9 @@ pub fn profiles_path() -> std::path::PathBuf {
 }
 
 #[derive(RustEmbed)]
-#[folder = "../../assets/sounds"]
+#[folder = "assets/sounds"]
 pub struct SoundAssets;
 
 #[derive(RustEmbed)]
-#[folder = "../../assets/scripts"]
+#[folder = "assets/scripts"]
 pub struct ScriptAssets;

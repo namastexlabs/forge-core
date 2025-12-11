@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Core utilities for the Forge task execution framework"
+include = ["src/**/*", "assets/**/*", "Cargo.toml"]
 
 [dependencies]
 tokio-util = { version = "0.7", features = ["io", "codec"] }
@@ -31,7 +32,7 @@ sentry-tracing = { version = "0.41.0", features = ["backtrace"] }
 futures-util = "0.3"
 json-patch = "2.0"
 base64 = "0.22"
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread", "macros", "io-util"] }
 futures = "0.3.31"
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 async-stream = "0.3"
