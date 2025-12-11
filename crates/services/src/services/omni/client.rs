@@ -1,58 +1,78 @@
-use reqwest::Client;
+use anyhow::Result;
 
-use super::types::{OmniInstance, SendTextRequest, SendTextResponse};
+use super::types::{InstancesResponse, OmniInstance, SendTextRequest, SendTextResponse};
 
-/// HTTP client for the Omni API
-#[derive(Debug, Clone)]
 pub struct OmniClient {
-    client: Client,
     base_url: String,
-    api_key: String,
+    api_key: Option<String>,
+    client: reqwest::Client,
 }
 
 impl OmniClient {
-    /// Create a new Omni client
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+    pub fn new(base_url: String, api_key: Option<String>) -> Self {
         Self {
-            client: Client::new(),
-            base_url: base_url.into(),
-            api_key: api_key.into(),
+            base_url,
+            api_key,
+            client: reqwest::Client::new(),
         }
     }
 
-    /// List all available instances
-    pub async fn list_instances(&self) -> Result<Vec<OmniInstance>, reqwest::Error> {
-        let url = format!("{}/instance/fetchInstances", self.base_url);
-        let response = self
+    pub async fn list_instances(&self) -> Result<Vec<OmniInstance>> {
+        let mut request = self
             .client
-            .get(&url)
-            .header("apikey", &self.api_key)
-            .send()
-            .await?
-            .json()
-            .await?;
-        Ok(response)
+            .get(format!("{}/api/v1/instances/", self.base_url));
+
+        if let Some(key) = &self.api_key {
+            request = request.header("X-API-Key", key);
+        }
+
+        let response: InstancesResponse = request.send().await?.json().await?;
+
+        let instances = response
+            .channels
+            .into_iter()
+            .map(OmniInstance::from)
+            .collect();
+
+        Ok(instances)
     }
 
-    /// Send a text message
     pub async fn send_text(
         &self,
-        instance_name: &str,
-        request: SendTextRequest,
-    ) -> Result<SendTextResponse, reqwest::Error> {
-        let url = format!(
-            "{}/message/sendText/{}",
-            self.base_url, instance_name
-        );
-        let response = self
-            .client
-            .post(&url)
-            .header("apikey", &self.api_key)
-            .json(&request)
-            .send()
-            .await?
-            .json()
-            .await?;
+        instance: &str,
+        req: SendTextRequest,
+    ) -> Result<SendTextResponse> {
+        let url = format!("{}/api/v1/instance/{}/send-text", self.base_url, instance);
+
+        tracing::info!("Sending Omni request to: {} with payload: {:?}", url, req);
+
+        let mut request = self.client.post(&url).json(&req);
+
+        if let Some(key) = &self.api_key {
+            request = request.header("X-API-Key", key);
+            tracing::debug!("Using API key for authentication");
+        }
+
+        let response = match request.send().await {
+            Ok(resp) => {
+                let status = resp.status();
+                tracing::info!("Omni API response status: {}", status);
+                if !status.is_success() {
+                    let text = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Unknown error".to_string());
+                    tracing::error!("Omni API error response: {}", text);
+                    return Err(anyhow::anyhow!("Omni API returned {status}: {text}"));
+                }
+                resp.json().await?
+            }
+            Err(e) => {
+                tracing::error!("Failed to connect to Omni API: {}", e);
+                return Err(e.into());
+            }
+        };
+
         Ok(response)
     }
 }

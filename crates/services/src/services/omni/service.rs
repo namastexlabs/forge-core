@@ -1,52 +1,104 @@
-use super::client::OmniClient;
-use super::types::{OmniConfig, OmniInstance, SendTextRequest, SendTextResponse};
+use anyhow::Result;
 
-/// Service for sending notifications via Omni (WhatsApp/SMS)
-#[derive(Debug, Clone)]
+use super::client::OmniClient;
+pub use super::types::*;
+
 pub struct OmniService {
-    client: OmniClient,
     config: OmniConfig,
+    pub client: OmniClient,
 }
 
 impl OmniService {
-    /// Create a new Omni service from configuration
     pub fn new(config: OmniConfig) -> Self {
-        let client = OmniClient::new(&config.api_url, &config.api_key);
-        Self { client, config }
+        let mut service = Self {
+            config: OmniConfig::default(),
+            client: OmniClient::new(String::new(), None),
+        };
+        service.apply_config(config);
+        service
     }
 
-    /// Get the current configuration
+    pub fn apply_config(&mut self, config: OmniConfig) {
+        self.client = OmniClient::new(
+            config.host.clone().unwrap_or_default(),
+            config.api_key.clone(),
+        );
+        self.config = config;
+    }
+
     pub fn config(&self) -> &OmniConfig {
         &self.config
     }
 
-    /// List all available Omni instances
-    pub async fn list_instances(&self) -> Result<Vec<OmniInstance>, reqwest::Error> {
-        self.client.list_instances().await
-    }
+    pub async fn send_task_notification(
+        &self,
+        task_title: &str,
+        task_status: &str,
+        task_url: Option<&str>,
+    ) -> Result<()> {
+        if !self.config.enabled {
+            tracing::debug!("Omni notifications disabled");
+            return Ok(());
+        }
 
-    /// Send a text message to the default recipient
-    pub async fn send_notification(&self, message: &str) -> Result<Option<SendTextResponse>, reqwest::Error> {
-        if let Some(recipient) = &self.config.default_recipient {
-            self.send_text(recipient, message).await.map(Some)
-        } else {
-            Ok(None)
+        let instance = self
+            .config
+            .instance
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No Omni instance configured"))?;
+        let recipient = self
+            .config
+            .recipient
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No recipient configured"))?;
+
+        tracing::info!(
+            "Sending Omni notification - Instance: {}, Recipient: {}, Title: {}",
+            instance,
+            recipient,
+            task_title
+        );
+
+        let message = format!(
+            "🎯 Task Complete: {}\n\n\
+             Status: {}\n\
+             {}",
+            task_title,
+            task_status,
+            task_url.map(|u| format!("URL: {u}")).unwrap_or_default()
+        );
+
+        let request = match self.config.recipient_type {
+            Some(RecipientType::PhoneNumber) => SendTextRequest {
+                phone_number: Some(recipient.clone()),
+                user_id: None,
+                text: message,
+            },
+            Some(RecipientType::UserId) => SendTextRequest {
+                phone_number: None,
+                user_id: Some(recipient.clone()),
+                text: message,
+            },
+            None => SendTextRequest {
+                phone_number: Some(recipient.clone()),
+                user_id: None,
+                text: message,
+            },
+        };
+
+        match self.client.send_text(instance, request).await {
+            Ok(response) => {
+                tracing::info!("Omni notification sent successfully: {:?}", response);
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!("Failed to send Omni notification: {}", e);
+                Err(e)
+            }
         }
     }
 
-    /// Send a text message to a specific recipient
-    pub async fn send_text(
-        &self,
-        recipient: &str,
-        message: &str,
-    ) -> Result<SendTextResponse, reqwest::Error> {
-        let request = SendTextRequest {
-            number: recipient.to_string(),
-            text: message.to_string(),
-            delay: None,
-        };
-        self.client
-            .send_text(&self.config.instance_name, request)
-            .await
+    pub async fn list_instances(&self) -> Result<Vec<OmniInstance>> {
+        self.client.list_instances().await
     }
 }

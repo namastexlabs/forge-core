@@ -1,33 +1,24 @@
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs_forge::TS;
+use uuid::Uuid;
 
 use super::super::omni::OmniConfig;
 
-/// Project-level configuration stored in .forge/config.json
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+/// Project-level configuration stored in auxiliary tables
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ProjectConfig {
-    /// Omni integration settings
-    #[serde(default)]
-    pub omni: Option<OmniConfig>,
-    /// Project-specific settings
-    #[serde(default)]
-    pub settings: ForgeProjectSettings,
+    pub project_id: Uuid,
+    #[ts(type = "JsonValue | null")]
+    pub custom_executors: Option<serde_json::Value>,
+    #[ts(type = "JsonValue | null")]
+    pub forge_config: Option<serde_json::Value>,
 }
 
-/// Project-specific settings for Forge
-#[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
-#[ts(export)]
+/// Configuration for forge-specific project settings
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 pub struct ForgeProjectSettings {
-    /// Custom branch prefix for this project
     #[serde(default)]
-    pub branch_prefix: Option<String>,
-    /// Whether to auto-create PRs on task completion
+    pub omni_enabled: bool,
     #[serde(default)]
-    pub auto_create_pr: bool,
-    /// Default assignees for created PRs
-    #[serde(default)]
-    pub default_assignees: Vec<String>,
-    /// Default labels for created PRs
-    #[serde(default)]
-    pub default_labels: Vec<String>,
+    pub omni_config: Option<OmniConfig>,
 }

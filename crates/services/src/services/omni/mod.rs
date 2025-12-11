@@ -1,11 +1,11 @@
-//! Omni integration service for WhatsApp/SMS notifications
+//! Forge Omni Extension
 //!
-//! This module provides integration with the Omni API for sending
-//! notifications via WhatsApp and SMS.
+//! This module contains the Omni notification system extracted from the upstream fork.
+//! Provides notification services for task completion and status updates.
 
-mod client;
-mod service;
-mod types;
+pub mod client;
+pub mod service;
+pub mod types;
 
 pub use client::OmniClient;
 pub use service::OmniService;

@@ -1,16 +1,17 @@
-//! Forge configuration service
+//! Forge Config Extension
 //!
-//! This module provides project-level configuration management for Forge,
-//! including project settings and integration with the upstream config system.
+//! This module contains forge-specific configuration functionality.
+//! For Task 2, this focuses on project-level config management and Omni integration.
 
-mod service;
-mod types;
+pub mod service;
+pub mod types;
 
+// Re-export Omni config for compatibility
+pub use super::omni::{OmniConfig, RecipientType};
 pub use service::ForgeConfigService;
+// Re-export upstream config primitives so downstream code can switch to forge-config without churn
+pub use crate::services::config::{
+    Config, ConfigError, EditorConfig, EditorType, GitHubConfig, NotificationConfig, SoundFile,
+    ThemeMode, UiLanguage, load_config_from_file, save_config_to_file,
+};
 pub use types::*;
-
-// Re-export OmniConfig from the omni module for convenience
-pub use super::omni::OmniConfig;
-
-// Re-export upstream Config for convenience
-pub use super::config::Config;
