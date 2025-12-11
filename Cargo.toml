@@ -22,7 +22,7 @@ categories = ["development-tools"]
 
 [workspace.dependencies]
 # Internal forge-core crates (for workspace inheritance)
-forge-core-utils = { path = "crates/utils" }
+forge-core-utils = { path = "crates/utils", version = "0.8.7-rc.24" }
 forge-core-executors = { path = "crates/executors" }
 forge-core-db = { path = "crates/db" }
 forge-core-services = { path = "crates/services" }
