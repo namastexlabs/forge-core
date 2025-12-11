@@ -2,7 +2,7 @@ use anyhow::Result;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use super::super::omni::OmniConfig;
+use crate::services::omni::OmniConfig;
 use super::types::{ForgeProjectSettings, ProjectConfig};
 
 pub struct ForgeConfigService {
@@ -162,7 +162,7 @@ struct ProjectConfigRow {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::omni::{OmniConfig, RecipientType};
+    use crate::services::omni::{OmniConfig, RecipientType};
 
     use super::*;
 

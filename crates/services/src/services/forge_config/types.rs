@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs_forge::TS;
 use uuid::Uuid;
 
-use super::super::omni::OmniConfig;
+use crate::services::omni::OmniConfig;
 
 /// Project-level configuration stored in auxiliary tables
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
