@@ -1,26 +1,36 @@
-name: Publish to crates.io (Stable Only)
+name: Publish to crates.io
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Stable version to publish (e.g., 0.8.7)'
+        description: 'Version to publish (e.g., 0.8.7 or 0.8.7-rc.30)'
+        required: true
+        type: string
+
+  # Allow chaining from pre-release.yml
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to publish'
         required: true
         type: string
 
   push:
     tags:
-      # Only trigger on stable version tags (v0.8.7, v0.9.0, etc.)
-      # NOT on RC tags (v0.8.7-rc.24)
+      # Stable versions: v0.8.7, v0.9.0
       - 'v[0-9]+.[0-9]+.[0-9]+'
+      # RC versions: v0.8.7-rc.30
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
 
 jobs:
-  validate-stable:
+  extract-version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.extract.outputs.version }}
+      is_prerelease: ${{ steps.extract.outputs.is_prerelease }}
     steps:
-      - name: Extract and validate version
+      - name: Extract version
         id: extract
         run: |
           if [ -n "${{ inputs.version }}" ]; then
@@ -30,18 +40,19 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
 
-          # Reject RC, alpha, beta versions
+          # Detect if this is a pre-release version
           if [[ "$VERSION" == *"-rc"* ]] || [[ "$VERSION" == *"-alpha"* ]] || [[ "$VERSION" == *"-beta"* ]]; then
-            echo "ERROR: Only stable versions allowed. Got: $VERSION"
-            echo "RC versions should be published via git tags only."
-            exit 1
+            echo "📦 Publishing PRE-RELEASE version: $VERSION"
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "📦 Publishing STABLE version: $VERSION"
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Publishing version: $VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   publish:
-    needs: validate-stable
+    needs: extract-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +65,7 @@ jobs:
 
       - name: Update version in Cargo.toml files
         run: |
-          VERSION="${{ needs.validate-stable.outputs.version }}"
+          VERSION="${{ needs.extract-version.outputs.version }}"
           echo "Setting version to $VERSION in workspace Cargo.toml"
 
           # Update workspace version
@@ -69,7 +80,7 @@ jobs:
       - name: Check if crates already published
         id: check-published
         run: |
-          VERSION="${{ needs.validate-stable.outputs.version }}"
+          VERSION="${{ needs.extract-version.outputs.version }}"
           CRATES="forge-core-utils forge-core-executors forge-core-db forge-core-services forge-core-deployment forge-core-local-deployment forge-core-server"
 
           for crate in $CRATES; do
@@ -86,63 +97,77 @@ jobs:
             fi
           done
 
-      - name: Publish crates (topological order)
+      - name: Publish crates with rollback safety
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          set -e  # Exit on any failure
+          VERSION="${{ needs.extract-version.outputs.version }}"
+          PUBLISHED_CRATES=""
+          PUBLISH_ORDER="forge-core-utils forge-core-executors forge-core-db forge-core-services forge-core-deployment forge-core-local-deployment forge-core-server"
 
-          publish_crate() {
-            local crate=$1
+          # Rollback function: yank all successfully published crates
+          rollback() {
+            echo "::error::Publishing failed, initiating rollback..."
+            for crate in $PUBLISHED_CRATES; do
+              echo "🔄 Yanking $crate@$VERSION..."
+              cargo yank --version "$VERSION" "$crate" 2>/dev/null || echo "⚠️ Could not yank $crate (may not exist yet)"
+            done
+            echo "::error::Rollback complete. All published crates have been yanked."
+            exit 1
+          }
+
+          # Trap errors and run rollback
+          trap 'rollback' ERR
+
+          for crate in $PUBLISH_ORDER; do
             echo "=== Publishing $crate ==="
 
             # Check if already published
             RESULT=$(cargo search "$crate" 2>/dev/null | grep "^$crate = " || echo "")
             if [ -n "$RESULT" ]; then
-              PUBLISHED=$(echo "$RESULT" | sed 's/.*= "\([^"]*\)".*/\1/')
-              if [ "$PUBLISHED" == "${{ needs.validate-stable.outputs.version }}" ]; then
-                echo "Skipping $crate - already published at version $PUBLISHED"
-                return 0
+              CURRENT=$(echo "$RESULT" | sed 's/.*= "\([^"]*\)".*/\1/')
+              if [ "$CURRENT" == "$VERSION" ]; then
+                echo "✅ Skipping $crate - already published at $VERSION"
+                continue
               fi
             fi
 
-            cargo publish -p "$crate" --allow-dirty || {
-              echo "ERROR: Failed to publish $crate"
-              exit 1
-            }
+            # Publish the crate
+            if cargo publish -p "$crate" --allow-dirty; then
+              PUBLISHED_CRATES="$PUBLISHED_CRATES $crate"
+              echo "✅ Published $crate@$VERSION"
+              echo "⏳ Waiting 45s for crates.io index update..."
+              sleep 45
+            else
+              echo "::error::Failed to publish $crate"
+              rollback
+            fi
+          done
 
-            echo "Waiting 45s for crates.io index update..."
-            sleep 45
-          }
-
-          # Publish in dependency order (leaves first)
-          publish_crate forge-core-utils
-          publish_crate forge-core-executors
-          publish_crate forge-core-db
-          publish_crate forge-core-services
-          publish_crate forge-core-deployment
-          publish_crate forge-core-local-deployment
-          publish_crate forge-core-server
-
-          echo "=== All crates published successfully! ==="
+          # Disable trap after successful completion
+          trap - ERR
+          echo "=== ✅ All crates published successfully! ==="
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
-          name: v${{ needs.validate-stable.outputs.version }}
+          name: v${{ needs.extract-version.outputs.version }}
+          prerelease: ${{ needs.extract-version.outputs.is_prerelease }}
           body: |
             ## Published to crates.io
 
             All forge-core crates are now available on crates.io:
 
             ```toml
-            forge-core-utils = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-executors = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-db = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-services = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-deployment = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-local-deployment = "${{ needs.validate-stable.outputs.version }}"
-            forge-core-server = "${{ needs.validate-stable.outputs.version }}"
+            forge-core-utils = "${{ needs.extract-version.outputs.version }}"
+            forge-core-executors = "${{ needs.extract-version.outputs.version }}"
+            forge-core-db = "${{ needs.extract-version.outputs.version }}"
+            forge-core-services = "${{ needs.extract-version.outputs.version }}"
+            forge-core-deployment = "${{ needs.extract-version.outputs.version }}"
+            forge-core-local-deployment = "${{ needs.extract-version.outputs.version }}"
+            forge-core-server = "${{ needs.extract-version.outputs.version }}"
             ```
+
+            **Type:** ${{ needs.extract-version.outputs.is_prerelease == 'true' && '🚧 Pre-release (RC)' || '✅ Stable' }}
           generate_release_notes: true
