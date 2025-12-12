@@ -1,10 +1,10 @@
 use std::{path::PathBuf, str::FromStr, sync::Arc};
 
+use forge_core_utils::assets::asset_dir;
 use sqlx::{
     Error, Pool, Sqlite, SqlitePool,
     sqlite::{SqliteConnectOptions, SqliteConnection, SqlitePoolOptions},
 };
-use forge_core_utils::assets::asset_dir;
 
 pub mod models;
 

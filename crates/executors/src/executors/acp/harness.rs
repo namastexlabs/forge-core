@@ -7,6 +7,7 @@ use std::{
 use agent_client_protocol as proto;
 use agent_client_protocol::Agent as _;
 use command_group::{AsyncCommandGroup, AsyncGroupChild};
+use forge_core_utils::stream_lines::LinesStreamExt;
 use futures::StreamExt;
 use tokio::{io::AsyncWriteExt, process::Command, sync::mpsc};
 use tokio_util::{
@@ -14,7 +15,6 @@ use tokio_util::{
     io::ReaderStream,
 };
 use tracing::error;
-use forge_core_utils::stream_lines::LinesStreamExt;
 
 use super::{AcpClient, SessionManager};
 use crate::{

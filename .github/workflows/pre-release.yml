@@ -450,3 +450,13 @@ jobs:
           prerelease: true
           generate_release_notes: true
           files: npx-cli/automagik-forge-*.tgz
+
+      - name: Trigger crates.io publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering crates.io publish for version ${{ needs.bump-version.outputs.new_version }}"
+          gh workflow run publish-crates.yml \
+            --ref "${{ needs.bump-version.outputs.new_tag }}" \
+            -f version="${{ needs.bump-version.outputs.new_version }}"
+          echo "✅ Publish workflow triggered"

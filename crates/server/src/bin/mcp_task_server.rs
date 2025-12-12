@@ -1,10 +1,10 @@
-use rmcp::{ServiceExt, transport::stdio};
 use forge_core_server::mcp::task_server::TaskServer;
-use tracing_subscriber::{EnvFilter, prelude::*};
 use forge_core_utils::{
     port_file::read_port_file,
     sentry::{self as sentry_utils, SentrySource, sentry_layer},
 };
+use rmcp::{ServiceExt, transport::stdio};
+use tracing_subscriber::{EnvFilter, prelude::*};
 
 fn main() -> anyhow::Result<()> {
     sentry_utils::init_once(SentrySource::Mcp);

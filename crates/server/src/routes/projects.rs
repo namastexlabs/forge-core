@@ -12,13 +12,13 @@ use forge_core_db::models::project::{
     CreateProject, Project, ProjectError, SearchMatchType, SearchResult, UpdateProject,
 };
 use forge_core_deployment::Deployment;
-use ignore::WalkBuilder;
 use forge_core_services::services::{
     file_ranker::FileRanker,
     file_search_cache::{CacheError, SearchMode, SearchQuery},
     git::GitBranch,
 };
 use forge_core_utils::{path::expand_tilde, response::ApiResponse};
+use ignore::WalkBuilder;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_project_middleware};

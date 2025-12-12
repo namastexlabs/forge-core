@@ -4,11 +4,11 @@ use std::{
     time::Duration,
 };
 
-use git2::Repository;
 use forge_core_services::services::{
     git::GitService,
     git_cli::{GitCli, GitCliError},
 };
+use git2::Repository;
 
 fn workspace_root() -> PathBuf {
     // CARGO_MANIFEST_DIR for this crate is <workspace>/crates/services

@@ -92,7 +92,9 @@ impl NotificationService {
                     .arg("\\a")
                     .spawn();
             }
-        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2()) {
+        } else if cfg!(target_os = "windows")
+            || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2())
+        {
             // Convert WSL path to Windows path if in WSL2
             let file_path = if forge_core_utils::is_wsl2() {
                 if let Some(windows_path) = Self::wsl_to_windows_path(&file_path).await {
@@ -119,7 +121,9 @@ impl NotificationService {
             Self::send_macos_notification(title, message).await;
         } else if cfg!(target_os = "linux") && !forge_core_utils::is_wsl2() {
             Self::send_linux_notification(title, message).await;
-        } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2()) {
+        } else if cfg!(target_os = "windows")
+            || (cfg!(target_os = "linux") && forge_core_utils::is_wsl2())
+        {
             Self::send_windows_notification(title, message).await;
         }
     }

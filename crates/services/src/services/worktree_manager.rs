@@ -4,10 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use forge_core_utils::shell::resolve_executable_path;
 use git2::{Error as GitError, Repository};
 use thiserror::Error;
 use tracing::{debug, info};
-use forge_core_utils::shell::resolve_executable_path;
 
 use super::{
     git::{GitService, GitServiceError},

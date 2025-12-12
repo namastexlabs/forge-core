@@ -7,14 +7,14 @@ use axum::{
     routing::{get, post},
 };
 use forge_core_deployment::Deployment;
-use octocrab::auth::Continue;
-use serde::{Deserialize, Serialize};
 use forge_core_services::services::{
     auth::{AuthError, DeviceFlowStartResponse},
     config::save_config_to_file,
     github_service::{GitHubService, GitHubServiceError},
 };
 use forge_core_utils::response::ApiResponse;
+use octocrab::auth::Continue;
+use serde::{Deserialize, Serialize};
 
 use crate::{DeploymentImpl, error::ApiError};
 

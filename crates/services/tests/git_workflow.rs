@@ -8,8 +8,8 @@ use forge_core_services::services::{
     git::{DiffTarget, GitService},
     github_service::{GitHubRepoInfo, GitHubServiceError},
 };
-use tempfile::TempDir;
 use forge_core_utils::diff::DiffChangeKind;
+use tempfile::TempDir;
 
 fn write_file<P: AsRef<Path>>(base: P, rel: &str, content: &str) {
     let path = base.as_ref().join(rel);

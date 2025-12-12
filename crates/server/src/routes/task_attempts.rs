@@ -32,8 +32,6 @@ use forge_core_executors::{
     executors::{CodingAgent, ExecutorError},
     profile::{ExecutorConfigs, ExecutorProfileId},
 };
-use git2::BranchType;
-use serde::{Deserialize, Serialize};
 use forge_core_services::services::{
     commit_message_generator::CommitMessageGenerator,
     commit_validator::{CommitValidator, WarningSeverity},
@@ -41,9 +39,11 @@ use forge_core_services::services::{
     git::{ConflictOp, WorktreeResetOptions},
     github_service::{CreatePrRequest, GitHubService, GitHubServiceError},
 };
+use forge_core_utils::response::ApiResponse;
+use git2::BranchType;
+use serde::{Deserialize, Serialize};
 use sqlx::Error as SqlxError;
 use ts_rs_forge::TS;
-use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{
@@ -560,8 +560,8 @@ async fn handle_task_attempt_diff_ws(
     task_attempt: TaskAttempt,
     stats_only: bool,
 ) -> anyhow::Result<()> {
-    use futures_util::{SinkExt, StreamExt, TryStreamExt};
     use forge_core_utils::log_msg::LogMsg;
+    use futures_util::{SinkExt, StreamExt, TryStreamExt};
 
     let stream = deployment
         .container()

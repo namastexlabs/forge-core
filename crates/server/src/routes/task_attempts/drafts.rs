@@ -4,11 +4,11 @@ use forge_core_db::models::{
     task_attempt::{TaskAttempt, TaskAttemptError},
 };
 use forge_core_deployment::Deployment;
-use serde::Deserialize;
 use forge_core_services::services::drafts::{
     DraftResponse, SetQueueRequest, UpdateFollowUpDraftRequest, UpdateRetryFollowUpDraftRequest,
 };
 use forge_core_utils::response::ApiResponse;
+use serde::Deserialize;
 
 use crate::{DeploymentImpl, error::ApiError};
 

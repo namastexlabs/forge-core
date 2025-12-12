@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use chrono::{DateTime, Utc};
+use forge_core_utils::diff::{Diff, DiffChangeKind, FileDiffDetails};
 use git2::{
     BranchType, Delta, DiffFindOptions, DiffOptions, Error as GitError, Reference, Remote,
     Repository, Sort, build::CheckoutBuilder,
@@ -8,7 +9,6 @@ use git2::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs_forge::TS;
-use forge_core_utils::diff::{Diff, DiffChangeKind, FileDiffDetails};
 
 // Import for file ranking functionality
 use super::file_ranker::FileStat;
