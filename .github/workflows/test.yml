@@ -12,17 +12,24 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 6  # Limit parallelism for self-hosted runner
 
 jobs:
   test:
-    runs-on: forge-core
+    runs-on: [self-hosted, Linux, X64]
     steps:
+      # Clean workspace to prevent permission issues on self-hosted runners
+      - name: Clean workspace
+        run: |
+          rm -rf "$GITHUB_WORKSPACE"/* "$GITHUB_WORKSPACE"/.[!.]* 2>/dev/null || true
+          rm -f .git/index.lock 2>/dev/null || true
+
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly-2025-05-18
+          toolchain: nightly-2025-12-04
           components: rustfmt, clippy
 
       - name: Cache Rust dependencies
@@ -31,7 +38,6 @@ jobs:
           RUST_CACHE_DEBUG: true
         with:
           workspaces: "."
-          cache-provider: "github"
           cache-on-failure: true
           shared-key: "shared"
           cache-all-crates: true
