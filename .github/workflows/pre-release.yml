@@ -39,7 +39,13 @@ jobs:
 
       - name: Install cargo-edit
         if: steps.cache-cargo-edit.outputs.cache-hit != 'true'
-        run: cargo install cargo-edit
+        run: |
+          # Check if binary already exists (handles edge case where cache misses but binary present)
+          if [ -f ~/.cargo/bin/cargo-set-version ]; then
+            echo "cargo-set-version already installed, skipping"
+          else
+            cargo install cargo-edit
+          fi
 
       - uses: actions/checkout@v4
         with:
