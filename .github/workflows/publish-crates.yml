@@ -18,10 +18,10 @@ on:
 
   push:
     tags:
-      # Stable versions: v0.8.7, v0.9.0
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # Stable versions: v0.8.7, v0.9.0 (glob pattern, not regex)
+      - 'v[0-9]*.[0-9]*.[0-9]*'
       # RC versions: v0.8.7-rc.30
-      - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+      - 'v[0-9]*.[0-9]*.[0-9]*-rc.[0-9]*'
 
 jobs:
   extract-version:
