@@ -14,8 +14,11 @@ use forge_core_services::services::{
     events::EventService,
     file_search_cache::FileSearchCache,
     filesystem::FilesystemService,
+    forge_config::ForgeConfigService,
     git::GitService,
     image::ImageService,
+    omni::{OmniConfig, OmniService},
+    profile_loader::ProfileCacheManager,
 };
 use forge_core_utils::{assets::config_path, msg_store::MsgStore};
 use tokio::sync::RwLock;
@@ -41,6 +44,9 @@ pub struct LocalDeployment {
     file_search_cache: Arc<FileSearchCache>,
     approvals: Approvals,
     drafts: DraftsService,
+    forge_config: ForgeConfigService,
+    omni: Arc<RwLock<OmniService>>,
+    profile_cache: ProfileCacheManager,
 }
 
 #[async_trait]
@@ -126,6 +132,11 @@ impl Deployment for LocalDeployment {
         let drafts = DraftsService::new(db.clone(), image.clone());
         let file_search_cache = Arc::new(FileSearchCache::new());
 
+        // Initialize forge-specific services
+        let forge_config = ForgeConfigService::new(db.pool.clone());
+        let omni = Arc::new(RwLock::new(OmniService::new(OmniConfig::default())));
+        let profile_cache = ProfileCacheManager::new();
+
         Ok(Self {
             config,
             user_id,
@@ -141,6 +152,9 @@ impl Deployment for LocalDeployment {
             file_search_cache,
             approvals,
             drafts,
+            forge_config,
+            omni,
+            profile_cache,
         })
     }
 
@@ -201,5 +215,17 @@ impl Deployment for LocalDeployment {
 
     fn drafts(&self) -> &DraftsService {
         &self.drafts
+    }
+
+    fn forge_config(&self) -> &ForgeConfigService {
+        &self.forge_config
+    }
+
+    fn omni(&self) -> &Arc<RwLock<OmniService>> {
+        &self.omni
+    }
+
+    fn profile_cache(&self) -> &ProfileCacheManager {
+        &self.profile_cache
     }
 }
