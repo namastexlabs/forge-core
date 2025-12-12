@@ -24,9 +24,12 @@ use forge_core_services::services::{
     file_search_cache::FileSearchCache,
     filesystem::{FilesystemError, FilesystemService},
     filesystem_watcher::FilesystemWatcherError,
+    forge_config::ForgeConfigService,
     git::{GitService, GitServiceError},
     image::{ImageError, ImageService},
+    omni::OmniService,
     pr_monitor::PrMonitorService,
+    profile_loader::ProfileCacheManager,
     worktree_manager::WorktreeError,
 };
 use forge_core_utils::{msg_store::MsgStore, sentry as sentry_utils};
@@ -104,6 +107,12 @@ pub trait Deployment: Clone + Send + Sync + 'static {
     fn approvals(&self) -> &Approvals;
 
     fn drafts(&self) -> &DraftsService;
+
+    fn forge_config(&self) -> &ForgeConfigService;
+
+    fn omni(&self) -> &Arc<RwLock<OmniService>>;
+
+    fn profile_cache(&self) -> &ProfileCacheManager;
 
     async fn update_sentry_scope(&self) -> Result<(), DeploymentError> {
         let user_id = self.user_id();

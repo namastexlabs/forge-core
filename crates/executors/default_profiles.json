@@ -1,7 +1,7 @@
 {
   "executors": {
     "CLAUDE_CODE": {
-      "DEFAULT": {
+      "GENIE": {
         "CLAUDE_CODE": {
           "dangerously_skip_permissions": true
         }
@@ -18,14 +18,14 @@
       }
     },
     "AMP": {
-      "DEFAULT": {
+      "GENIE": {
         "AMP": {
           "dangerously_allow_all": true
         }
       }
     },
     "GEMINI": {
-      "DEFAULT": {
+      "GENIE": {
         "GEMINI": {
           "model": "default",
           "yolo": true
@@ -39,7 +39,7 @@
       }
     },
     "CODEX": {
-      "DEFAULT": {
+      "GENIE": {
         "CODEX": {
           "sandbox": "danger-full-access"
         }
@@ -58,19 +58,19 @@
       }
     },
     "OPENCODE": {
-      "DEFAULT": {
+      "GENIE": {
         "OPENCODE": {}
       }
     },
     "QWEN_CODE": {
-      "DEFAULT": {
+      "GENIE": {
         "QWEN_CODE": {
           "yolo": true
         }
       }
     },
     "CURSOR_AGENT": {
-      "DEFAULT": {
+      "GENIE": {
         "CURSOR_AGENT": {
           "force": true,
           "model": "auto"
@@ -108,7 +108,7 @@
       }
     },
     "COPILOT": {
-      "DEFAULT": {
+      "GENIE": {
         "COPILOT": {
           "allow_all_tools": true
         }
