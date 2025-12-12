@@ -76,8 +76,11 @@ jobs:
           # Verify the change
           grep "^version = " Cargo.toml
 
+      - name: Set default toolchain
+        run: rustup default nightly-2025-12-04
+
       - name: Verify build
-        run: cargo check --workspace
+        run: cargo +nightly-2025-12-04 check --workspace
 
       - name: Check if crates already published
         id: check-published
@@ -134,8 +137,8 @@ jobs:
               fi
             fi
 
-            # Publish the crate
-            if cargo publish -p "$crate" --allow-dirty; then
+            # Publish the crate (use explicit toolchain)
+            if cargo +nightly-2025-12-04 publish -p "$crate" --allow-dirty; then
               PUBLISHED_CRATES="$PUBLISHED_CRATES $crate"
               echo "✅ Published $crate@$VERSION"
               echo "⏳ Waiting 45s for crates.io index update..."
