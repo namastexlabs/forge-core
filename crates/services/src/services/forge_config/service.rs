@@ -89,7 +89,7 @@ impl ForgeConfigService {
         let mut config = self
             .get_project_config(project_id)
             .await?
-            .unwrap_or_else(|| ProjectConfig {
+            .unwrap_or(ProjectConfig {
                 project_id,
                 custom_executors: None,
                 forge_config: None,
