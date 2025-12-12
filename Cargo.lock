@@ -1509,7 +1509,7 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "forge-core-db"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1535,7 +1535,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-deployment"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1555,7 +1555,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-executors"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "agent-client-protocol",
  "async-trait",
@@ -1606,7 +1606,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-local-deployment"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1645,7 +1645,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-server"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-services"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1749,7 +1749,7 @@ dependencies = [
 
 [[package]]
 name = "forge-core-utils"
-version = "0.8.7-rc.33"
+version = "0.8.7-rc.34"
 dependencies = [
  "async-stream",
  "axum",
