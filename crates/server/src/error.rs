@@ -10,14 +10,14 @@ use forge_core_db::models::{
 };
 use forge_core_deployment::DeploymentError;
 use forge_core_executors::executors::ExecutorError;
-use git2::Error as Git2Error;
 use forge_core_services::services::{
     auth::AuthError, config::ConfigError, container::ContainerError, drafts::DraftsServiceError,
     git::GitServiceError, github_service::GitHubServiceError, image::ImageError,
     worktree_manager::WorktreeError,
 };
-use thiserror::Error;
 use forge_core_utils::response::ApiResponse;
+use git2::Error as Git2Error;
+use thiserror::Error;
 
 #[derive(Debug, Error, ts_rs_forge::TS)]
 #[ts(type = "string")]

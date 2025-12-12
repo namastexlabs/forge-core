@@ -1,10 +1,10 @@
 use std::fmt;
 
 use async_trait::async_trait;
+use forge_core_utils::approvals::ApprovalStatus;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
-use forge_core_utils::approvals::ApprovalStatus;
 
 /// Errors emitted by executor approval services.
 #[derive(Debug, Error)]

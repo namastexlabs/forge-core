@@ -4,11 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use git2::{PushOptions, Repository, build::CheckoutBuilder};
 use forge_core_services::services::{
     git::GitService,
     git_cli::{GitCli, GitCliError},
 };
+use git2::{PushOptions, Repository, build::CheckoutBuilder};
 use tempfile::TempDir;
 // Avoid direct git CLI usage in tests; exercise GitService instead.
 

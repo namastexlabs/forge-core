@@ -10,8 +10,8 @@
 //!
 use std::{sync::Arc, time::Duration};
 
-use futures::StreamExt;
 use forge_core_utils::msg_store::MsgStore;
+use futures::StreamExt;
 
 use super::{
     NormalizedEntry, NormalizedEntryError, NormalizedEntryType,

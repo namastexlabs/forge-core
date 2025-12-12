@@ -38,8 +38,6 @@ use forge_core_executors::{
         },
     },
 };
-use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
-use serde_json::json;
 use forge_core_services::services::{
     analytics::AnalyticsContext,
     approvals::{Approvals, executor_approvals::ExecutorApprovalBridge},
@@ -51,13 +49,15 @@ use forge_core_services::services::{
     notification::NotificationService,
     worktree_manager::WorktreeManager,
 };
-use tokio::{sync::RwLock, task::JoinHandle};
-use tokio_util::io::ReaderStream;
 use forge_core_utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
     text::{git_branch_id, short_uuid},
 };
+use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
+use serde_json::json;
+use tokio::{sync::RwLock, task::JoinHandle};
+use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 use crate::command;
@@ -1534,7 +1534,9 @@ impl LocalContainerService {
             };
 
         let follow_up_action = forge_core_executors::actions::ExecutorAction::new(
-            forge_core_executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request),
+            forge_core_executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(
+                follow_up_request,
+            ),
             cleanup_action,
         );
 

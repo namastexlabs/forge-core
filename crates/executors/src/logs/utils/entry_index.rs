@@ -5,8 +5,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use json_patch::PatchOperation;
 use forge_core_utils::{log_msg::LogMsg, msg_store::MsgStore};
+use json_patch::PatchOperation;
 
 /// Thread-safe provider for monotonically increasing entry indexes
 #[derive(Debug, Clone)]

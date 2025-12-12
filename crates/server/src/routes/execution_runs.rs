@@ -21,11 +21,11 @@ use forge_core_executors::{
     },
     profile::ExecutorProfileId,
 };
-use serde::{Deserialize, Serialize};
 use forge_core_services::services::container::ContainerService;
+use forge_core_utils::response::ApiResponse;
+use serde::{Deserialize, Serialize};
 use sqlx::Error as SqlxError;
 use ts_rs_forge::TS;
-use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_execution_run_middleware};
@@ -215,8 +215,8 @@ async fn handle_logs_ws(
     deployment: DeploymentImpl,
     execution_run: ExecutionRun,
 ) -> anyhow::Result<()> {
-    use futures_util::{SinkExt, StreamExt, TryStreamExt};
     use forge_core_utils::log_msg::LogMsg;
+    use futures_util::{SinkExt, StreamExt, TryStreamExt};
 
     let stream = deployment
         .container()

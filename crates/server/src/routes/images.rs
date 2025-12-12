@@ -12,13 +12,13 @@ use forge_core_db::models::{
     task::Task,
 };
 use forge_core_deployment::Deployment;
-use serde::{Deserialize, Serialize};
 use forge_core_services::services::image::ImageError;
+use forge_core_utils::response::ApiResponse;
+use serde::{Deserialize, Serialize};
 use sqlx::Error as SqlxError;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 use ts_rs_forge::TS;
-use forge_core_utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError};
@@ -38,7 +38,11 @@ pub struct ImageResponse {
 impl ImageResponse {
     pub fn from_image(image: Image) -> Self {
         // special relative path for images
-        let markdown_path = format!("{}/{}", forge_core_utils::path::FORGE_IMAGES_DIR, image.file_path);
+        let markdown_path = format!(
+            "{}/{}",
+            forge_core_utils::path::FORGE_IMAGES_DIR,
+            image.file_path
+        );
         Self {
             id: image.id,
             file_path: markdown_path,

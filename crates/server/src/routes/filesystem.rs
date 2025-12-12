@@ -5,9 +5,11 @@ use axum::{
     routing::get,
 };
 use forge_core_deployment::Deployment;
-use serde::Deserialize;
-use forge_core_services::services::filesystem::{DirectoryEntry, DirectoryListResponse, FilesystemError};
+use forge_core_services::services::filesystem::{
+    DirectoryEntry, DirectoryListResponse, FilesystemError,
+};
 use forge_core_utils::response::ApiResponse;
+use serde::Deserialize;
 
 use crate::{DeploymentImpl, error::ApiError};
 

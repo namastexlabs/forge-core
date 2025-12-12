@@ -7,11 +7,12 @@ pub mod service;
 pub mod types;
 
 // Re-export Omni config for compatibility
-pub use super::omni::{OmniConfig, RecipientType};
 pub use service::ForgeConfigService;
+pub use types::*;
+
+pub use super::omni::{OmniConfig, RecipientType};
 // Re-export upstream config primitives so downstream code can switch to forge-config without churn
 pub use crate::services::config::{
     Config, ConfigError, EditorConfig, EditorType, GitHubConfig, NotificationConfig, SoundFile,
     ThemeMode, UiLanguage, load_config_from_file, save_config_to_file,
 };
-pub use types::*;
