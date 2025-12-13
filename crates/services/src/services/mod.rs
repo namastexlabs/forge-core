@@ -20,4 +20,5 @@ pub mod image;
 pub mod notification;
 pub mod omni;
 pub mod pr_monitor;
+pub mod profile_loader;
 pub mod worktree_manager;

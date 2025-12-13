@@ -88,10 +88,28 @@ pub async fn create_execution_run(
 ) -> Result<ResponseJson<ApiResponse<ExecutionRunResponse>>, ApiError> {
     let pool = &deployment.db().pool;
 
-    // Validate project exists
-    let _project = Project::find_by_id(pool, payload.project_id)
+    // Validate project exists and get git_repo_path for profile loading
+    let project = Project::find_by_id(pool, payload.project_id)
         .await?
         .ok_or(SqlxError::RowNotFound)?;
+
+    // Load and cache workspace-specific .genie profiles (per-workspace, thread-safe)
+    // Note: Profiles are cached in ProfileCacheManager per-workspace, NOT in global static cache
+    // This avoids race conditions when multiple projects are accessed concurrently
+    if let Ok(_cache) = deployment
+        .profile_cache()
+        .get_or_create(project.git_repo_path.clone())
+        .await
+    {
+        tracing::debug!(
+            "Cached .genie profiles for execution run workspace: {}",
+            project.git_repo_path.display()
+        );
+        deployment
+            .profile_cache()
+            .register_project(project.id, project.git_repo_path.clone())
+            .await;
+    }
 
     // Determine base branch (defaults to "main")
     let base_branch = payload.base_branch.unwrap_or_else(|| "main".to_string());
@@ -100,9 +118,10 @@ pub async fn create_execution_run(
     let run_id = Uuid::new_v4();
     let branch_name = format!("run/{}", &run_id.to_string()[..8]);
 
-    // Create the execution run record
+    // Create the execution run record (now includes variant for profile alignment)
     let create_run = CreateExecutionRun {
         executor: payload.executor_profile_id.executor,
+        variant: payload.executor_profile_id.variant.clone(),
         base_branch: base_branch.clone(),
         prompt: payload.prompt.clone(),
     };

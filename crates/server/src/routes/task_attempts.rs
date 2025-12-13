@@ -166,13 +166,36 @@ pub async fn create_task_attempt(
         .await?
         .ok_or(SqlxError::RowNotFound)?;
 
+    // Load workspace-specific .genie profiles and inject into global cache just-in-time
+    let project = task
+        .parent_project(&deployment.db().pool)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+    // Load and cache workspace-specific .genie profiles (per-workspace, thread-safe)
+    // Note: Profiles are cached in ProfileCacheManager per-workspace, NOT in global static cache
+    // This avoids race conditions when multiple projects are accessed concurrently
+    if let Ok(_cache) = deployment
+        .profile_cache()
+        .get_or_create(project.git_repo_path.clone())
+        .await
+    {
+        tracing::debug!(
+            "Cached .genie profiles for workspace: {}",
+            project.git_repo_path.display()
+        );
+        deployment
+            .profile_cache()
+            .register_project(project.id, project.git_repo_path.clone())
+            .await;
+    }
+
     let attempt_id = Uuid::new_v4();
     let git_branch_name = deployment
         .container()
         .git_branch_from_task_attempt(&attempt_id, &task.title)
         .await;
 
-    let task_attempt = TaskAttempt::create(
+    let mut task_attempt = TaskAttempt::create(
         &deployment.db().pool,
         &CreateTaskAttempt {
             executor: executor_profile_id.executor,
@@ -183,6 +206,19 @@ pub async fn create_task_attempt(
         payload.task_id,
     )
     .await?;
+
+    // Store executor with variant for filtering (executor:variant format)
+    if let Some(variant) = &executor_profile_id.variant {
+        let executor_with_variant = format!("{}:{}", executor_profile_id.executor, variant);
+        sqlx::query(
+            "UPDATE task_attempts SET executor = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(&executor_with_variant)
+        .bind(attempt_id.to_string())
+        .execute(&deployment.db().pool)
+        .await?;
+        task_attempt.executor = executor_with_variant;
+    }
 
     // Insert worktree config if explicitly specified (defaults to true when not present)
     if let Some(use_worktree) = payload.use_worktree {
@@ -294,6 +330,24 @@ pub async fn follow_up(
         .parent_project(&deployment.db().pool)
         .await?
         .ok_or(SqlxError::RowNotFound)?;
+
+    // Load and cache workspace-specific .genie profiles (per-workspace, thread-safe)
+    // Note: Profiles are cached in ProfileCacheManager per-workspace, NOT in global static cache
+    // This avoids race conditions when multiple projects are accessed concurrently
+    if let Ok(_cache) = deployment
+        .profile_cache()
+        .get_or_create(project.git_repo_path.clone())
+        .await
+    {
+        tracing::debug!(
+            "Cached .genie profiles for workspace: {} (follow-up)",
+            project.git_repo_path.display()
+        );
+        deployment
+            .profile_cache()
+            .register_project(project.id, project.git_repo_path.clone())
+            .await;
+    }
 
     // If retry settings provided, perform replace-logic before proceeding
     if let Some(proc_id) = payload.retry_process_id {

@@ -30,6 +30,9 @@ pub struct ExecutionRun {
     pub branch: String,
     pub target_branch: String,
     pub executor: String,
+    /// Profile variant name (e.g., "GENIE", "PLAN", "APPROVALS")
+    /// Enables ExecutionRuns to use .genie profiles the same way Tasks do.
+    pub variant: Option<String>,
     pub container_ref: Option<String>,
     pub prompt: String,
     pub worktree_deleted: bool,
@@ -41,6 +44,8 @@ pub struct ExecutionRun {
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateExecutionRun {
     pub executor: BaseCodingAgent,
+    /// Profile variant name (e.g., "GENIE", "PLAN", "APPROVALS")
+    pub variant: Option<String>,
     pub base_branch: String,
     pub prompt: String,
 }
@@ -62,6 +67,7 @@ impl ExecutionRun {
                       branch,
                       target_branch,
                       executor AS "executor!",
+                      variant,
                       container_ref,
                       prompt,
                       worktree_deleted AS "worktree_deleted!: bool",
@@ -88,6 +94,7 @@ impl ExecutionRun {
                           branch,
                           target_branch,
                           executor AS "executor!",
+                          variant,
                           container_ref,
                           prompt,
                           worktree_deleted AS "worktree_deleted!: bool",
@@ -108,6 +115,7 @@ impl ExecutionRun {
                           branch,
                           target_branch,
                           executor AS "executor!",
+                          variant,
                           container_ref,
                           prompt,
                           worktree_deleted AS "worktree_deleted!: bool",
@@ -137,6 +145,7 @@ impl ExecutionRun {
                       er.branch,
                       er.target_branch,
                       er.executor AS "executor!",
+                      er.variant,
                       er.container_ref,
                       er.prompt,
                       er.worktree_deleted AS "worktree_deleted!: bool",
@@ -172,13 +181,14 @@ impl ExecutionRun {
     ) -> Result<Self, ExecutionRunError> {
         Ok(sqlx::query_as!(
             ExecutionRun,
-            r#"INSERT INTO execution_runs (id, project_id, branch, target_branch, executor, container_ref, prompt, worktree_deleted)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            r#"INSERT INTO execution_runs (id, project_id, branch, target_branch, executor, variant, container_ref, prompt, worktree_deleted)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING id AS "id!: Uuid",
                          project_id AS "project_id!: Uuid",
                          branch,
                          target_branch,
                          executor AS "executor!",
+                         variant,
                          container_ref,
                          prompt,
                          worktree_deleted AS "worktree_deleted!: bool",
@@ -189,6 +199,7 @@ impl ExecutionRun {
             branch,
             data.base_branch,
             data.executor,
+            data.variant,
             Option::<String>::None,
             data.prompt,
             false

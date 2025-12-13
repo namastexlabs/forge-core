@@ -11,6 +11,7 @@ pub mod auth;
 pub mod config;
 pub mod containers;
 pub mod filesystem;
+pub mod forge;
 // pub mod github;
 pub mod drafts;
 pub mod events;
@@ -40,6 +41,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(filesystem::router())
         .merge(events::router(&deployment))
         .merge(approvals::router())
+        .merge(forge::router(&deployment))
         .nest("/images", images::routes())
         .layer(from_fn_with_state(
             deployment.clone(),

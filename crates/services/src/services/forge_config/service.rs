@@ -5,6 +5,7 @@ use uuid::Uuid;
 use super::types::{ForgeProjectSettings, ProjectConfig};
 use crate::services::omni::OmniConfig;
 
+#[derive(Clone)]
 pub struct ForgeConfigService {
     pool: SqlitePool,
 }

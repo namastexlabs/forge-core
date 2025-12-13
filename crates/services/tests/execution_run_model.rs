@@ -73,6 +73,7 @@ async fn test_execution_run_create_without_task() {
 
     let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
         executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+        variant: None,
         base_branch: "main".to_string(),
         prompt: "Test prompt".to_string(),
     };
@@ -100,6 +101,7 @@ async fn test_execution_run_find_by_id() {
 
     let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
         executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+        variant: None,
         base_branch: "main".to_string(),
         prompt: "Find me test".to_string(),
     };
@@ -133,6 +135,7 @@ async fn test_execution_run_fetch_all_with_project_filter() {
         let run_id = Uuid::new_v4();
         let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
             executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+            variant: None,
             base_branch: "main".to_string(),
             prompt: format!("Project 1 run {i}"),
         };
@@ -152,6 +155,7 @@ async fn test_execution_run_fetch_all_with_project_filter() {
         let run_id = Uuid::new_v4();
         let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
             executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+            variant: None,
             base_branch: "main".to_string(),
             prompt: format!("Project 2 run {i}"),
         };
@@ -192,6 +196,7 @@ async fn test_execution_run_update_container_ref() {
 
     let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
         executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+        variant: None,
         base_branch: "main".to_string(),
         prompt: "Container ref test".to_string(),
     };
@@ -238,6 +243,7 @@ async fn test_execution_run_mark_worktree_deleted() {
 
     let create_data = forge_core_db::models::execution_run::CreateExecutionRun {
         executor: forge_core_executors::executors::BaseCodingAgent::ClaudeCode,
+        variant: None,
         base_branch: "main".to_string(),
         prompt: "Worktree deletion test".to_string(),
     };
