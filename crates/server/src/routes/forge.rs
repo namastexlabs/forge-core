@@ -15,6 +15,7 @@ use axum::{
 };
 use forge_core_db::models::project::Project;
 use forge_core_deployment::Deployment;
+use forge_core_executors::profile::ExecutorConfigs;
 use forge_core_services::services::{
     forge_config::ForgeProjectSettings,
     omni::{OmniConfig, OmniInstance, OmniService},
@@ -44,6 +45,10 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             get(get_project_branch_status),
         )
         .route("/forge/projects/{project_id}/pull", post(post_project_pull))
+        .route(
+            "/forge/projects/{project_id}/profiles",
+            get(get_project_profiles),
+        )
         // Omni routes
         .route("/forge/omni/status", get(get_omni_status))
         .route("/forge/omni/instances", get(list_omni_instances))
@@ -401,6 +406,49 @@ async fn post_project_pull(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+/// Get executor profiles for a specific project (per-workspace)
+async fn get_project_profiles(
+    State(deployment): State<DeploymentImpl>,
+    Path(project_id): Path<Uuid>,
+) -> Result<Json<ApiResponse<ExecutorConfigs>>, StatusCode> {
+    // Fetch project to get git_repo_path for lazy registration
+    let project = Project::find_by_id(&deployment.db().pool, project_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to find project {}: {}", project_id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::error!("Project {} not found", project_id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    // Lazy registration: ensure cache exists and project is registered
+    // This enables hot-reload for projects that haven't created tasks yet
+    if let Ok(_cache) = deployment
+        .profile_cache()
+        .get_or_create(project.git_repo_path.clone())
+        .await
+    {
+        deployment
+            .profile_cache()
+            .register_project(project_id, project.git_repo_path.clone())
+            .await;
+    }
+
+    // Now get profiles (will work because project is registered)
+    let profiles = deployment
+        .profile_cache()
+        .get_profiles_for_project(project_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get profiles for project {}: {}", project_id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(ApiResponse::success(profiles)))
 }
 
 // ============================================================================

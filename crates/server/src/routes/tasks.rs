@@ -254,7 +254,10 @@ async fn handle_kanban_tasks_ws(
                                             )
                                         {
                                             let task_id = task_with_status.task.id;
+                                            // Filter by forge_agents cache OR by task status
+                                            // The status check is a backup for race conditions
                                             if is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status == TaskStatus::Agent
                                             {
                                                 return None;
                                             }
@@ -268,7 +271,10 @@ async fn handle_kanban_tasks_ws(
                                             )
                                         {
                                             let task_id = task_with_status.task.id;
+                                            // Filter by forge_agents cache OR by task status
+                                            // The status check is a backup for race conditions
                                             if is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status == TaskStatus::Agent
                                             {
                                                 return None;
                                             }
@@ -294,7 +300,11 @@ async fn handle_kanban_tasks_ws(
                                         )
                                     {
                                         let task_id = task_with_status.task.id;
-                                        if !is_agent_task(&agent_task_ids, &pool, task_id).await {
+                                        // Filter by forge_agents cache OR by task status
+                                        // The status check is a backup for race conditions
+                                        let is_agent = is_agent_task(&agent_task_ids, &pool, task_id).await
+                                            || task_with_status.task.status == TaskStatus::Agent;
+                                        if !is_agent {
                                             filtered_tasks.insert(
                                                 task_id_str.to_string(),
                                                 task_value.clone(),
@@ -432,17 +442,26 @@ pub async fn create_task_and_start(
     Json(payload): Json<CreateAndStartTaskRequest>,
 ) -> Result<ResponseJson<ApiResponse<TaskWithAttemptStatus>>, ApiError> {
     let task_id = Uuid::new_v4();
-    let task = Task::create(&deployment.db().pool, &payload.task, task_id).await?;
+    let use_worktree = payload.use_worktree.unwrap_or(true);
+
+    // Set initial status based on use_worktree to avoid race condition with WebSocket broadcasts.
+    // Agent tasks (use_worktree: false) must be created with status 'agent' from the start,
+    // so the first WebSocket broadcast already has the correct status for filtering.
+    let initial_status = if use_worktree {
+        TaskStatus::Todo
+    } else {
+        TaskStatus::Agent
+    };
+    let task =
+        Task::create_with_status(&deployment.db().pool, &payload.task, task_id, initial_status)
+            .await?;
 
     if let Some(image_ids) = &payload.task.image_ids {
         TaskImage::associate_many(&deployment.db().pool, task.id, image_ids).await?;
     }
 
     // If non-worktree task (e.g., agent chat), register in forge_agents to hide from kanban
-    let use_worktree = payload.use_worktree.unwrap_or(true);
     if !use_worktree {
-        let mut tx = deployment.db().pool.begin().await?;
-
         sqlx::query(
             r#"INSERT INTO forge_agents (id, project_id, agent_type, task_id, created_at, updated_at)
                VALUES (?, ?, 'genie_chat', ?, datetime('now'), datetime('now'))"#,
@@ -450,16 +469,9 @@ pub async fn create_task_and_start(
         .bind(Uuid::new_v4().to_string())
         .bind(task.project_id.to_string())
         .bind(task.id.to_string())
-        .execute(&mut *tx)
+        .execute(&deployment.db().pool)
         .await?;
-
-        // Set task status to 'agent' so it's filtered from kanban board
-        sqlx::query("UPDATE tasks SET status = 'agent', updated_at = datetime('now') WHERE id = ?")
-            .bind(task.id.to_string())
-            .execute(&mut *tx)
-            .await?;
-
-        tx.commit().await?;
+        // Note: Status is already set to 'agent' at task creation time above
     }
 
     deployment
