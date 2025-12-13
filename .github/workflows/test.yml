@@ -10,13 +10,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_BUILD_JOBS: 6
-
 jobs:
   test:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: forge-core
+    env:
+      CARGO_HOME: /opt/cargo-home
+      CARGO_TERM_COLOR: always
+      CARGO_BUILD_JOBS: 6
+      PATH: /home/runner/.cargo/bin:/usr/local/bin:/usr/bin:/bin
     steps:
       - name: Clean workspace
         run: |
