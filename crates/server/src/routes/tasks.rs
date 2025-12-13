@@ -302,8 +302,10 @@ async fn handle_kanban_tasks_ws(
                                         let task_id = task_with_status.task.id;
                                         // Filter by forge_agents cache OR by task status
                                         // The status check is a backup for race conditions
-                                        let is_agent = is_agent_task(&agent_task_ids, &pool, task_id).await
-                                            || task_with_status.task.status == TaskStatus::Agent;
+                                        let is_agent =
+                                            is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status
+                                                    == TaskStatus::Agent;
                                         if !is_agent {
                                             filtered_tasks.insert(
                                                 task_id_str.to_string(),
@@ -452,9 +454,13 @@ pub async fn create_task_and_start(
     } else {
         TaskStatus::Agent
     };
-    let task =
-        Task::create_with_status(&deployment.db().pool, &payload.task, task_id, initial_status)
-            .await?;
+    let task = Task::create_with_status(
+        &deployment.db().pool,
+        &payload.task,
+        task_id,
+        initial_status,
+    )
+    .await?;
 
     if let Some(image_ids) = &payload.task.image_ids {
         TaskImage::associate_many(&deployment.db().pool, task.id, image_ids).await?;
