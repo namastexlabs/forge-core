@@ -14,6 +14,7 @@ use axum::{
 };
 use forge_core_db::models::{
     image::TaskImage,
+    project::Project,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus, UpdateTask},
     task_attempt::{CreateTaskAttempt, TaskAttempt},
 };
@@ -157,14 +158,19 @@ pub async fn stream_tasks_ws(
     ws: WebSocketUpgrade,
     State(deployment): State<DeploymentImpl>,
     Query(query): Query<TaskQuery>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| async move {
+) -> Result<impl IntoResponse, ApiError> {
+    // Verify project exists (authorization check)
+    let _project = Project::find_by_id(&deployment.db().pool, query.project_id)
+        .await?
+        .ok_or(ApiError::Database(SqlxError::RowNotFound))?;
+
+    Ok(ws.on_upgrade(move |socket| async move {
         // Kanban WebSocket always filters out agent tasks
         let result = handle_kanban_tasks_ws(socket, deployment, query.project_id).await;
         if let Err(e) = result {
             tracing::warn!("kanban tasks WS closed: {}", e);
         }
-    })
+    }))
 }
 
 /// Handle kanban WebSocket (excludes agent tasks)
@@ -336,7 +342,10 @@ async fn handle_kanban_tasks_ws(
                                     Ok(patch) => Some(Ok(LogMsg::JsonPatch(patch))),
                                     Err(e) => {
                                         tracing::error!("Failed to deserialize filtered patch: {}", e);
-                                        Some(Err(anyhow::anyhow!("Patch deserialization failed")))
+                                        Some(Err(std::io::Error::new(
+                                            std::io::ErrorKind::InvalidData,
+                                            "Patch deserialization failed",
+                                        )))
                                     }
                                 };
                             }
