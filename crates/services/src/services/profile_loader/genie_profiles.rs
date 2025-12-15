@@ -15,6 +15,7 @@ use forge_core_executors::{
     profile::{ExecutorConfig, ExecutorConfigs},
 };
 use serde::{Deserialize, Serialize};
+use serde_yaml_ng as serde_yaml;
 
 /// Represents the new frontmatter schema with genie.* and forge.* namespaces
 #[derive(Debug, Clone, Serialize, Deserialize)]
