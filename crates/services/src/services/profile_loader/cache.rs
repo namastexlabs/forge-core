@@ -69,8 +69,14 @@ impl ProfileCache {
         let new_profiles = self.load_profiles_now()?;
         let new_count = self.count_variants(&new_profiles);
 
-        *self.profiles.write().await = new_profiles;
-        *self.last_count.write().await = new_count;
+        // Atomic update: acquire both locks before updating to prevent race condition
+        // where readers could see new profiles with old count or vice versa
+        {
+            let mut profiles_guard = self.profiles.write().await;
+            let mut count_guard = self.last_count.write().await;
+            *profiles_guard = new_profiles;
+            *count_guard = new_count;
+        }
 
         if new_count != old_count {
             tracing::info!(
@@ -109,8 +115,14 @@ impl ProfileCache {
         tracing::debug!("Spawning file watcher thread...");
         std::thread::spawn(move || {
             tracing::debug!("File watcher thread started");
-            if let Err(e) = cache.watch_loop(&genie_path, runtime) {
-                tracing::error!("File watcher error: {}", e);
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                if let Err(e) = cache.watch_loop(&genie_path, runtime) {
+                    tracing::error!("File watcher error: {}", e);
+                }
+            }));
+
+            if let Err(panic) = result {
+                tracing::error!("File watcher thread panicked: {:?}", panic);
             }
         });
 
@@ -164,12 +176,16 @@ impl ProfileCache {
                         tracing::info!("Detected .genie changes, reloading profiles...");
 
                         // Reload using the passed-in runtime handle
-                        if let Err(e) = runtime.block_on(self.reload()) {
-                            tracing::error!("Failed to reload profiles: {}", e);
+                        match runtime.block_on(self.reload()) {
+                            Ok(()) => {
+                                pending_reload = false;
+                                last_reload = std::time::Instant::now();
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to reload profiles, will retry: {}", e);
+                                // Keep pending_reload = true to retry on next cycle
+                            }
                         }
-
-                        pending_reload = false;
-                        last_reload = std::time::Instant::now();
                     }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
