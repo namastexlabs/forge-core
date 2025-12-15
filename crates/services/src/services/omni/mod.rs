@@ -10,3 +10,6 @@ pub mod types;
 pub use client::OmniClient;
 pub use service::OmniService;
 pub use types::*;
+
+#[cfg(test)]
+mod tests;
