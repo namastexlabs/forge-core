@@ -98,12 +98,17 @@ impl ProfileCache {
 
         tracing::debug!("start_watching called for {:?}", self.workspace_root);
 
-        if !genie_path.exists() {
-            tracing::debug!("No .genie folder to watch in {:?}", self.workspace_root);
-            return Ok(());
-        }
-
-        tracing::info!("Watching .genie folder for changes: {:?}", genie_path);
+        // Watch workspace root for .genie creation, or .genie directly if it exists
+        let watch_path = if genie_path.exists() {
+            tracing::info!("Watching .genie folder for changes: {:?}", genie_path);
+            genie_path.clone()
+        } else {
+            tracing::info!(
+                "No .genie folder yet, watching workspace root for creation: {:?}",
+                self.workspace_root
+            );
+            self.workspace_root.clone()
+        };
 
         // Clone for the watcher thread
         let cache = self.clone();
@@ -116,7 +121,7 @@ impl ProfileCache {
         std::thread::spawn(move || {
             tracing::debug!("File watcher thread started");
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                if let Err(e) = cache.watch_loop(&genie_path, runtime) {
+                if let Err(e) = cache.watch_loop(&watch_path, &genie_path, runtime) {
                     tracing::error!("File watcher error: {}", e);
                 }
             }));
@@ -131,8 +136,15 @@ impl ProfileCache {
     }
 
     /// Watch loop (runs in separate thread)
-    fn watch_loop(&self, genie_path: &Path, runtime: tokio::runtime::Handle) -> Result<()> {
-        tracing::debug!("watch_loop entered for {:?}", genie_path);
+    /// watch_path: what we're currently watching (workspace root or .genie)
+    /// genie_path: the .genie folder path (may not exist yet)
+    fn watch_loop(
+        &self,
+        watch_path: &Path,
+        genie_path: &Path,
+        runtime: tokio::runtime::Handle,
+    ) -> Result<()> {
+        tracing::debug!("watch_loop entered for {:?}", watch_path);
 
         let (tx, rx) = std::sync::mpsc::channel();
 
@@ -147,8 +159,8 @@ impl ProfileCache {
         )?;
         tracing::debug!("RecommendedWatcher created");
 
-        tracing::debug!("Starting to watch {:?}", genie_path);
-        watcher.watch(genie_path, RecursiveMode::Recursive)?;
+        tracing::debug!("Starting to watch {:?}", watch_path);
+        watcher.watch(watch_path, RecursiveMode::Recursive)?;
 
         tracing::debug!("File watcher started for {:?}", genie_path);
 
@@ -179,13 +191,14 @@ impl ProfileCache {
                         match runtime.block_on(self.reload()) {
                             Ok(()) => {
                                 pending_reload = false;
-                                last_reload = std::time::Instant::now();
                             }
                             Err(e) => {
                                 tracing::error!("Failed to reload profiles, will retry: {}", e);
                                 // Keep pending_reload = true to retry on next cycle
                             }
                         }
+                        // Always update last_reload to prevent tight retry loop on errors
+                        last_reload = std::time::Instant::now();
                     }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
@@ -202,11 +215,19 @@ impl ProfileCache {
     fn is_relevant_event(&self, event: &Event) -> bool {
         match event.kind {
             EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                // Only care about .md files
-                event
-                    .paths
-                    .iter()
-                    .any(|p| p.extension().and_then(|e| e.to_str()) == Some("md"))
+                event.paths.iter().any(|p| {
+                    // Detect .genie folder creation
+                    if p.file_name().and_then(|n| n.to_str()) == Some(".genie") {
+                        return true;
+                    }
+                    // Detect .md file changes inside .genie
+                    if p.extension().and_then(|e| e.to_str()) == Some("md") {
+                        return p
+                            .ancestors()
+                            .any(|a| a.file_name().and_then(|n| n.to_str()) == Some(".genie"));
+                    }
+                    false
+                })
             }
             _ => false,
         }
