@@ -341,7 +341,10 @@ async fn handle_kanban_tasks_ws(
                                 return match serde_json::from_value(filtered_patch) {
                                     Ok(patch) => Some(Ok(LogMsg::JsonPatch(patch))),
                                     Err(e) => {
-                                        tracing::error!("Failed to deserialize filtered patch: {}", e);
+                                        tracing::error!(
+                                            "Failed to deserialize filtered patch: {}",
+                                            e
+                                        );
                                         Some(Err(std::io::Error::new(
                                             std::io::ErrorKind::InvalidData,
                                             "Patch deserialization failed",
