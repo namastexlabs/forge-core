@@ -183,6 +183,7 @@ async fn handle_kanban_tasks_ws(
     let pool = deployment.db().pool.clone();
 
     // Batch query for all agent task IDs at initialization
+    // CRITICAL: Fail early if DB query fails - empty cache would leak agent tasks to kanban
     let agent_task_ids: Arc<RwLock<HashSet<Uuid>>> = {
         let agent_tasks: Vec<Uuid> = sqlx::query_scalar(
             "SELECT task_id FROM forge_agents fa
@@ -192,14 +193,14 @@ async fn handle_kanban_tasks_ws(
         .bind(project_id)
         .fetch_all(&pool)
         .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(
-                "Failed to fetch initial agent task IDs for project {}: {}",
+        .map_err(|e| {
+            tracing::error!(
+                "Critical: Failed to init agent task cache for project {}: {}",
                 project_id,
                 e
             );
-            Vec::new()
-        });
+            anyhow::anyhow!("Failed to initialize task filter: {}", e)
+        })?;
 
         Arc::new(RwLock::new(agent_tasks.into_iter().collect()))
     };
@@ -209,7 +210,7 @@ async fn handle_kanban_tasks_ws(
     let refresh_pool = pool.clone();
     let refresh_project_id = project_id;
     let refresh_task_handle = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
             interval.tick().await;
 
@@ -331,9 +332,13 @@ async fn handle_kanban_tasks_ws(
                                     "path": "/tasks",
                                     "value": filtered_tasks
                                 }]);
-                                return Some(Ok(LogMsg::JsonPatch(
-                                    serde_json::from_value(filtered_patch).unwrap(),
-                                )));
+                                return match serde_json::from_value(filtered_patch) {
+                                    Ok(patch) => Some(Ok(LogMsg::JsonPatch(patch))),
+                                    Err(e) => {
+                                        tracing::error!("Failed to deserialize filtered patch: {}", e);
+                                        Some(Err(anyhow::anyhow!("Patch deserialization failed")))
+                                    }
+                                };
                             }
                         }
                         Some(Ok(LogMsg::JsonPatch(patch)))
@@ -390,6 +395,10 @@ async fn is_agent_task(
             .bind(task_id)
             .fetch_one(pool)
             .await
+            .map_err(|e| {
+                tracing::warn!("Agent task fallback query failed for {}: {}", task_id, e);
+                e
+            })
             .unwrap_or(false);
 
     // If it's an agent, update cache
