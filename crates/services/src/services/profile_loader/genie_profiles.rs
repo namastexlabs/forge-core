@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use convert_case::{Case, Casing};
 use forge_core_executors::{
     executors::{BaseCodingAgent, CodingAgent},
-    profile::{ExecutorConfig, ExecutorConfigs},
+    profile::{ExecutorConfig, ExecutorConfigs, canonical_variant_key},
 };
 use serde::{Deserialize, Serialize};
 use serde_yaml_ng as serde_yaml;
@@ -539,12 +539,13 @@ impl GenieProfileLoader {
                 .parse::<BaseCodingAgent>()
                 .context(format!("Invalid executor: {executor_str}"))?;
 
-            // Determine variant name
-            let variant_name = metadata
+            // Determine variant name (canonicalize to ensure case-insensitive matching)
+            let raw_variant = metadata
                 .forge_profile_name
                 .clone()
                 .or_else(|| Some(self.derive_variant_name(&metadata, file)))
                 .unwrap_or_else(|| "GENIE".to_string());
+            let variant_name = canonical_variant_key(&raw_variant);
 
             // Build CodingAgent configuration
             let config = self.build_coding_agent(&executor, &metadata, &full_instructions)?;
