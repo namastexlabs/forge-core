@@ -179,3 +179,21 @@ jobs:
 
             **Type:** ${{ needs.extract-version.outputs.is_prerelease == 'true' && '🚧 Pre-release (RC)' || '✅ Stable' }}
           generate_release_notes: true
+
+      - name: Notify automagik-forge of new release
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          VERSION="${{ needs.extract-version.outputs.version }}"
+          echo "📤 Notifying automagik-forge of version ${VERSION}..."
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/namastexlabs/automagik-forge/dispatches \
+            -f event_type='forge-core-published' \
+            -f client_payload[version]="${VERSION}" \
+            -f client_payload[tag]="v${VERSION}" \
+            -f client_payload[is_prerelease]="${{ needs.extract-version.outputs.is_prerelease }}"
+
+          echo "✅ Notified automagik-forge to update forge-core dependencies"
