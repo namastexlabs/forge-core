@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow;
 use axum::{
@@ -14,6 +14,7 @@ use axum::{
 };
 use forge_core_db::models::{
     image::TaskImage,
+    project::Project,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus, UpdateTask},
     task_attempt::{CreateTaskAttempt, TaskAttempt},
 };
@@ -36,53 +37,342 @@ pub struct TaskQuery {
     pub project_id: Uuid,
 }
 
+/// Get kanban tasks (excludes agent tasks)
+/// Agent tasks are in their own endpoint: /projects/{id}/agents/tasks
 pub async fn get_tasks(
     State(deployment): State<DeploymentImpl>,
     Query(query): Query<TaskQuery>,
 ) -> Result<ResponseJson<ApiResponse<Vec<TaskWithAttemptStatus>>>, ApiError> {
-    let tasks =
-        Task::find_by_project_id_with_attempt_status(&deployment.db().pool, query.project_id)
-            .await?;
-
+    // Kanban endpoint always excludes agent tasks
+    // Agent tasks have their own dedicated endpoint
+    let tasks = get_kanban_tasks(&deployment.db().pool, query.project_id).await?;
     Ok(ResponseJson(ApiResponse::success(tasks)))
 }
 
+/// Get kanban tasks (excludes agent tasks in forge_agents table)
+async fn get_kanban_tasks(
+    pool: &sqlx::SqlitePool,
+    project_id: Uuid,
+) -> Result<Vec<TaskWithAttemptStatus>, sqlx::Error> {
+    let query_str = r#"SELECT
+  t.id                            AS "id",
+  t.project_id                    AS "project_id",
+  t.title,
+  t.description,
+  t.status                        AS "status",
+  t.parent_task_attempt           AS "parent_task_attempt",
+  t.dev_server_id                 AS "dev_server_id",
+  t.created_at                    AS "created_at",
+  t.updated_at                    AS "updated_at",
+
+  CASE WHEN EXISTS (
+    SELECT 1
+      FROM task_attempts ta
+      JOIN execution_processes ep
+        ON ep.task_attempt_id = ta.id
+     WHERE ta.task_id       = t.id
+       AND ep.status        = 'running'
+       AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+     LIMIT 1
+  ) THEN 1 ELSE 0 END            AS has_in_progress_attempt,
+
+  CASE WHEN (
+    SELECT ep.status
+      FROM task_attempts ta
+      JOIN execution_processes ep
+        ON ep.task_attempt_id = ta.id
+     WHERE ta.task_id       = t.id
+     AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+     ORDER BY ep.created_at DESC
+     LIMIT 1
+  ) IN ('failed','killed') THEN 1 ELSE 0 END
+                                 AS last_attempt_failed,
+
+  ( SELECT ta.executor
+      FROM task_attempts ta
+      WHERE ta.task_id = t.id
+     ORDER BY ta.created_at DESC
+      LIMIT 1
+    )                               AS executor,
+
+  ( SELECT COUNT(*)
+      FROM task_attempts ta
+      WHERE ta.task_id = t.id
+    )                               AS attempt_count
+
+FROM tasks t
+WHERE t.project_id = ?
+  AND t.id NOT IN (SELECT task_id FROM forge_agents)
+ORDER BY t.created_at DESC"#;
+
+    let rows = sqlx::query(query_str)
+        .bind(project_id)
+        .fetch_all(pool)
+        .await?;
+
+    let mut items: Vec<TaskWithAttemptStatus> = Vec::with_capacity(rows.len());
+    for row in rows {
+        use sqlx::Row;
+
+        // Build Task directly from row (eliminates N+1 query)
+        let status_str: String = row.try_get("status")?;
+        let task = Task {
+            id: row.try_get("id")?,
+            project_id: row.try_get("project_id")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+            status: status_str.parse().unwrap_or(TaskStatus::Todo),
+            parent_task_attempt: row.try_get("parent_task_attempt").ok().flatten(),
+            dev_server_id: row.try_get("dev_server_id").ok().flatten(),
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+        };
+
+        let has_in_progress_attempt = row
+            .try_get::<i64, _>("has_in_progress_attempt")
+            .map(|v| v != 0)
+            .unwrap_or(false);
+        let last_attempt_failed = row
+            .try_get::<i64, _>("last_attempt_failed")
+            .map(|v| v != 0)
+            .unwrap_or(false);
+        let executor: String = row.try_get("executor").unwrap_or_else(|_| String::new());
+        let attempt_count: i64 = row.try_get::<i64, _>("attempt_count").unwrap_or(0);
+
+        items.push(TaskWithAttemptStatus {
+            task,
+            has_in_progress_attempt,
+            has_merged_attempt: false,
+            last_attempt_failed,
+            executor,
+            attempt_count,
+        });
+    }
+
+    Ok(items)
+}
+
+/// WebSocket for kanban tasks (excludes agent tasks)
+/// Agent tasks have their own dedicated WebSocket endpoint
 pub async fn stream_tasks_ws(
     ws: WebSocketUpgrade,
     State(deployment): State<DeploymentImpl>,
     Query(query): Query<TaskQuery>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| async move {
-        if let Err(e) = handle_tasks_ws(socket, deployment, query.project_id).await {
-            tracing::warn!("tasks WS closed: {}", e);
+) -> Result<impl IntoResponse, ApiError> {
+    // Verify project exists (authorization check)
+    let _project = Project::find_by_id(&deployment.db().pool, query.project_id)
+        .await?
+        .ok_or(ApiError::Database(SqlxError::RowNotFound))?;
+
+    Ok(ws.on_upgrade(move |socket| async move {
+        // Kanban WebSocket always filters out agent tasks
+        let result = handle_kanban_tasks_ws(socket, deployment, query.project_id).await;
+        if let Err(e) = result {
+            tracing::warn!("kanban tasks WS closed: {}", e);
         }
-    })
+    }))
 }
 
-async fn handle_tasks_ws(
+/// Handle kanban WebSocket (excludes agent tasks)
+/// Uses a cache with periodic refresh to minimize DB queries
+async fn handle_kanban_tasks_ws(
     socket: WebSocket,
     deployment: DeploymentImpl,
     project_id: Uuid,
 ) -> anyhow::Result<()> {
-    // Get the raw stream and convert LogMsg to WebSocket messages
-    let mut stream = deployment
+    use std::{collections::HashSet, sync::Arc, time::Duration};
+
+    use forge_core_utils::log_msg::LogMsg;
+    use serde_json::json;
+    use tokio::sync::RwLock;
+
+    let pool = deployment.db().pool.clone();
+
+    // Batch query for all agent task IDs at initialization
+    // CRITICAL: Fail early if DB query fails - empty cache would leak agent tasks to kanban
+    let agent_task_ids: Arc<RwLock<HashSet<Uuid>>> = {
+        let agent_tasks: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT task_id FROM forge_agents fa
+             INNER JOIN tasks t ON fa.task_id = t.id
+             WHERE t.project_id = ?",
+        )
+        .bind(project_id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                "Critical: Failed to init agent task cache for project {}: {}",
+                project_id,
+                e
+            );
+            anyhow::anyhow!("Failed to initialize task filter: {}", e)
+        })?;
+
+        Arc::new(RwLock::new(agent_tasks.into_iter().collect()))
+    };
+
+    // Spawn background task to refresh agent task IDs periodically
+    let refresh_cache = agent_task_ids.clone();
+    let refresh_pool = pool.clone();
+    let refresh_project_id = project_id;
+    let refresh_task_handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(30));
+        loop {
+            interval.tick().await;
+
+            match sqlx::query_scalar::<_, Uuid>(
+                "SELECT task_id FROM forge_agents fa
+                 INNER JOIN tasks t ON fa.task_id = t.id
+                 WHERE t.project_id = ?",
+            )
+            .bind(refresh_project_id)
+            .fetch_all(&refresh_pool)
+            .await
+            {
+                Ok(tasks) => {
+                    let mut cache = refresh_cache.write().await;
+                    cache.clear();
+                    cache.extend(tasks);
+                    tracing::trace!(
+                        "Refreshed agent task cache for project {}: {} tasks",
+                        refresh_project_id,
+                        cache.len()
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to refresh agent task cache for project {}: {}",
+                        refresh_project_id,
+                        e
+                    );
+                }
+            }
+        }
+    });
+
+    // Get the raw stream and filter out agent tasks
+    let stream = deployment
         .events()
         .stream_tasks_raw(project_id)
         .await?
+        .filter_map(move |msg_result| {
+            let agent_task_ids = agent_task_ids.clone();
+            let pool = pool.clone();
+            async move {
+                match msg_result {
+                    Ok(LogMsg::JsonPatch(patch)) => {
+                        if let Some(patch_op) = patch.0.first() {
+                            // Handle direct task patches
+                            if patch_op.path().starts_with("/tasks/") {
+                                match patch_op {
+                                    json_patch::PatchOperation::Add(op) => {
+                                        if let Ok(task_with_status) =
+                                            serde_json::from_value::<TaskWithAttemptStatus>(
+                                                op.value.clone(),
+                                            )
+                                        {
+                                            let task_id = task_with_status.task.id;
+                                            // Filter by forge_agents cache OR by task status
+                                            // The status check is a backup for race conditions
+                                            if is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status == TaskStatus::Agent
+                                            {
+                                                return None;
+                                            }
+                                            return Some(Ok(LogMsg::JsonPatch(patch)));
+                                        }
+                                    }
+                                    json_patch::PatchOperation::Replace(op) => {
+                                        if let Ok(task_with_status) =
+                                            serde_json::from_value::<TaskWithAttemptStatus>(
+                                                op.value.clone(),
+                                            )
+                                        {
+                                            let task_id = task_with_status.task.id;
+                                            // Filter by forge_agents cache OR by task status
+                                            // The status check is a backup for race conditions
+                                            if is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status == TaskStatus::Agent
+                                            {
+                                                return None;
+                                            }
+                                            return Some(Ok(LogMsg::JsonPatch(patch)));
+                                        }
+                                    }
+                                    json_patch::PatchOperation::Remove(_) => {
+                                        return Some(Ok(LogMsg::JsonPatch(patch)));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            // Handle initial snapshot
+                            else if patch_op.path() == "/tasks"
+                                && let json_patch::PatchOperation::Replace(op) = patch_op
+                                && let Some(tasks_obj) = op.value.as_object()
+                            {
+                                let mut filtered_tasks = serde_json::Map::new();
+                                for (task_id_str, task_value) in tasks_obj {
+                                    if let Ok(task_with_status) =
+                                        serde_json::from_value::<TaskWithAttemptStatus>(
+                                            task_value.clone(),
+                                        )
+                                    {
+                                        let task_id = task_with_status.task.id;
+                                        // Filter by forge_agents cache OR by task status
+                                        // The status check is a backup for race conditions
+                                        let is_agent =
+                                            is_agent_task(&agent_task_ids, &pool, task_id).await
+                                                || task_with_status.task.status
+                                                    == TaskStatus::Agent;
+                                        if !is_agent {
+                                            filtered_tasks.insert(
+                                                task_id_str.to_string(),
+                                                task_value.clone(),
+                                            );
+                                        }
+                                    }
+                                }
+
+                                let filtered_patch = json!([{
+                                    "op": "replace",
+                                    "path": "/tasks",
+                                    "value": filtered_tasks
+                                }]);
+                                return match serde_json::from_value(filtered_patch) {
+                                    Ok(patch) => Some(Ok(LogMsg::JsonPatch(patch))),
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "Failed to deserialize filtered patch: {}",
+                                            e
+                                        );
+                                        Some(Err(std::io::Error::new(
+                                            std::io::ErrorKind::InvalidData,
+                                            "Patch deserialization failed",
+                                        )))
+                                    }
+                                };
+                            }
+                        }
+                        Some(Ok(LogMsg::JsonPatch(patch)))
+                    }
+                    Ok(other) => Some(Ok(other)),
+                    Err(e) => Some(Err(e)),
+                }
+            }
+        })
         .map_ok(|msg| msg.to_ws_message_unchecked());
 
-    // Split socket into sender and receiver
+    futures_util::pin_mut!(stream);
+
     let (mut sender, mut receiver) = socket.split();
 
-    // Drain (and ignore) any client->server messages so pings/pongs work
     tokio::spawn(async move { while let Some(Ok(_)) = receiver.next().await {} });
 
-    // Forward server messages
     while let Some(item) = stream.next().await {
         match item {
             Ok(msg) => {
                 if sender.send(msg).await.is_err() {
-                    break; // client disconnected
+                    break;
                 }
             }
             Err(e) => {
@@ -91,7 +381,45 @@ async fn handle_tasks_ws(
             }
         }
     }
+
+    refresh_task_handle.abort();
+
     Ok(())
+}
+
+/// Check if a task is an agent task using cache with DB fallback
+async fn is_agent_task(
+    agent_task_ids: &Arc<tokio::sync::RwLock<std::collections::HashSet<Uuid>>>,
+    pool: &sqlx::SqlitePool,
+    task_id: Uuid,
+) -> bool {
+    // Check cache first
+    {
+        let cache = agent_task_ids.read().await;
+        if cache.contains(&task_id) {
+            return true;
+        }
+    }
+
+    // Fallback to DB query for tasks not in cache
+    let is_agent_db: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM forge_agents WHERE task_id = ?)")
+            .bind(task_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| {
+                tracing::warn!("Agent task fallback query failed for {}: {}", task_id, e);
+                e
+            })
+            .unwrap_or(false);
+
+    // If it's an agent, update cache
+    if is_agent_db {
+        let mut cache = agent_task_ids.write().await;
+        cache.insert(task_id);
+    }
+
+    is_agent_db
 }
 
 pub async fn get_task(
@@ -148,10 +476,40 @@ pub async fn create_task_and_start(
     Json(payload): Json<CreateAndStartTaskRequest>,
 ) -> Result<ResponseJson<ApiResponse<TaskWithAttemptStatus>>, ApiError> {
     let task_id = Uuid::new_v4();
-    let task = Task::create(&deployment.db().pool, &payload.task, task_id).await?;
+    let use_worktree = payload.use_worktree.unwrap_or(true);
+
+    // Set initial status based on use_worktree to avoid race condition with WebSocket broadcasts.
+    // Agent tasks (use_worktree: false) must be created with status 'agent' from the start,
+    // so the first WebSocket broadcast already has the correct status for filtering.
+    let initial_status = if use_worktree {
+        TaskStatus::Todo
+    } else {
+        TaskStatus::Agent
+    };
+    let task = Task::create_with_status(
+        &deployment.db().pool,
+        &payload.task,
+        task_id,
+        initial_status,
+    )
+    .await?;
 
     if let Some(image_ids) = &payload.task.image_ids {
         TaskImage::associate_many(&deployment.db().pool, task.id, image_ids).await?;
+    }
+
+    // If non-worktree task (e.g., agent chat), register in forge_agents to hide from kanban
+    if !use_worktree {
+        sqlx::query(
+            r#"INSERT INTO forge_agents (id, project_id, agent_type, task_id, created_at, updated_at)
+               VALUES (?, ?, 'genie_chat', ?, datetime('now'), datetime('now'))"#,
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(task.project_id.to_string())
+        .bind(task.id.to_string())
+        .execute(&deployment.db().pool)
+        .await?;
+        // Note: Status is already set to 'agent' at task creation time above
     }
 
     deployment
@@ -165,13 +523,36 @@ pub async fn create_task_and_start(
             }),
         )
         .await;
+
+    // Load and cache workspace-specific .genie profiles (per-workspace, thread-safe)
+    // Note: Profiles are cached in ProfileCacheManager per-workspace, NOT in global static cache
+    // This avoids race conditions when multiple projects are accessed concurrently
+    let project = task
+        .parent_project(&deployment.db().pool)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+    if let Ok(_cache) = deployment
+        .profile_cache()
+        .get_or_create(project.git_repo_path.clone())
+        .await
+    {
+        tracing::debug!(
+            "Cached .genie profiles for workspace: {}",
+            project.git_repo_path.display()
+        );
+        deployment
+            .profile_cache()
+            .register_project(project.id, project.git_repo_path.clone())
+            .await;
+    }
+
     let attempt_id = Uuid::new_v4();
     let git_branch_name = deployment
         .container()
         .git_branch_from_task_attempt(&attempt_id, &task.title)
         .await;
 
-    let task_attempt = TaskAttempt::create(
+    let mut task_attempt = TaskAttempt::create(
         &deployment.db().pool,
         &CreateTaskAttempt {
             executor: payload.executor_profile_id.executor,
@@ -182,6 +563,19 @@ pub async fn create_task_and_start(
         task.id,
     )
     .await?;
+
+    // Store executor with variant for filtering (executor:variant format)
+    if let Some(variant) = &payload.executor_profile_id.variant {
+        let executor_with_variant = format!("{}:{}", payload.executor_profile_id.executor, variant);
+        sqlx::query(
+            "UPDATE task_attempts SET executor = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(&executor_with_variant)
+        .bind(attempt_id.to_string())
+        .execute(&deployment.db().pool)
+        .await?;
+        task_attempt.executor = executor_with_variant;
+    }
 
     // Insert worktree config if explicitly specified (defaults to true when not present)
     if let Some(use_worktree) = payload.use_worktree {

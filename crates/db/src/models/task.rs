@@ -315,6 +315,19 @@ WHERE t.id = $1"#,
         data: &CreateTask,
         task_id: Uuid,
     ) -> Result<Self, sqlx::Error> {
+        Self::create_with_status(pool, data, task_id, TaskStatus::Todo).await
+    }
+
+    /// Create a task with a specific initial status.
+    /// Use this when creating agent tasks (status = Agent) to ensure the task
+    /// is created with the correct status from the start, avoiding race conditions
+    /// with WebSocket broadcasts.
+    pub async fn create_with_status(
+        pool: &SqlitePool,
+        data: &CreateTask,
+        task_id: Uuid,
+        status: TaskStatus,
+    ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Task,
             r#"INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt)
@@ -324,7 +337,7 @@ WHERE t.id = $1"#,
             data.project_id,
             data.title,
             data.description,
-            TaskStatus::Todo as TaskStatus,
+            status,
             data.parent_task_attempt
         )
         .fetch_one(pool)

@@ -8,13 +8,17 @@ use ts_rs_forge::TS;
 
 use crate::executors::{BaseCodingAgent, CodingAgent, StandardCodingAgentExecutor};
 
+/// The standard variant name for the default profile (formerly "DEFAULT")
+pub const GENIE_VARIANT: &str = "GENIE";
+
 /// Return the canonical form for variant keys.
-/// – "DEFAULT" is kept as-is  
+/// – "GENIE" (or legacy "DEFAULT") is kept as GENIE
 /// – everything else is converted to SCREAMING_SNAKE_CASE
 pub fn canonical_variant_key<S: AsRef<str>>(raw: S) -> String {
     let key = raw.as_ref();
-    if key.eq_ignore_ascii_case("DEFAULT") {
-        "DEFAULT".to_string()
+    // Support legacy "DEFAULT" name for backwards compatibility
+    if key.eq_ignore_ascii_case("DEFAULT") || key.eq_ignore_ascii_case("GENIE") {
+        GENIE_VARIANT.to_string()
     } else {
         // Convert to SCREAMING_SNAKE_CASE by first going to snake_case then uppercase
         key.to_case(Case::Snake).to_case(Case::ScreamingSnake)
@@ -124,15 +128,15 @@ impl ExecutorConfig {
         self.configurations.get(variant)
     }
 
-    /// Get the default configuration for this executor
+    /// Get the default (GENIE) configuration for this executor
     pub fn get_default(&self) -> Option<&CodingAgent> {
-        self.configurations.get("DEFAULT")
+        self.configurations.get(GENIE_VARIANT)
     }
 
-    /// Create a new executor profile with just a default configuration
+    /// Create a new executor profile with just a default (GENIE) configuration
     pub fn new_with_default(default_config: CodingAgent) -> Self {
         let mut configurations = HashMap::new();
-        configurations.insert("DEFAULT".to_string(), default_config);
+        configurations.insert(GENIE_VARIANT.to_string(), default_config);
         Self { configurations }
     }
 
@@ -143,25 +147,26 @@ impl ExecutorConfig {
         config: CodingAgent,
     ) -> Result<(), &'static str> {
         let key = canonical_variant_key(&variant_name);
-        if key == "DEFAULT" {
+        if key == GENIE_VARIANT {
             return Err(
-                "Cannot override 'DEFAULT' variant using set_variant, use set_default instead",
+                "Cannot override 'GENIE' variant using set_variant, use set_default instead",
             );
         }
         self.configurations.insert(key, config);
         Ok(())
     }
 
-    /// Set the default configuration
+    /// Set the default (GENIE) configuration
     pub fn set_default(&mut self, config: CodingAgent) {
-        self.configurations.insert("DEFAULT".to_string(), config);
+        self.configurations
+            .insert(GENIE_VARIANT.to_string(), config);
     }
 
-    /// Get all variant names (excluding "DEFAULT")
+    /// Get all variant names (excluding "GENIE")
     pub fn variant_names(&self) -> Vec<&String> {
         self.configurations
             .keys()
-            .filter(|k| *k != "DEFAULT")
+            .filter(|k| *k != GENIE_VARIANT)
             .collect()
     }
 }
@@ -326,10 +331,10 @@ impl ExecutorConfigs {
     /// Validate that merged profiles are consistent and valid
     fn validate_merged(merged: &Self) -> Result<(), ProfileError> {
         for (executor_key, profile) in &merged.executors {
-            // Ensure default configuration exists
-            let default_config = profile.configurations.get("DEFAULT").ok_or_else(|| {
+            // Ensure GENIE (default) configuration exists
+            let default_config = profile.configurations.get(GENIE_VARIANT).ok_or_else(|| {
                 ProfileError::Validation(format!(
-                    "Executor '{executor_key}' is missing required 'default' configuration"
+                    "Executor '{executor_key}' is missing required 'GENIE' configuration"
                 ))
             })?;
 
@@ -368,7 +373,7 @@ impl ExecutorConfigs {
                     &executor_profile_id
                         .variant
                         .clone()
-                        .unwrap_or("DEFAULT".to_string()),
+                        .unwrap_or(GENIE_VARIANT.to_string()),
                 )
             })
             .cloned()
@@ -381,9 +386,9 @@ impl ExecutorConfigs {
         self.get_coding_agent(executor_profile_id)
             .unwrap_or_else(|| {
                 let mut default_executor_profile_id = executor_profile_id.clone();
-                default_executor_profile_id.variant = Some("DEFAULT".to_string());
+                default_executor_profile_id.variant = Some(GENIE_VARIANT.to_string());
                 self.get_coding_agent(&default_executor_profile_id)
-                    .expect("No default variant found")
+                    .expect("No GENIE variant found")
             })
     }
     /// Get the first available executor profile for new users
@@ -407,5 +412,37 @@ pub fn to_default_variant(id: &ExecutorProfileId) -> ExecutorProfileId {
     ExecutorProfileId {
         executor: id.executor,
         variant: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_canonical_variant_key_default_to_genie() {
+        // Legacy "DEFAULT" should map to "GENIE" for backward compatibility
+        assert_eq!(canonical_variant_key("DEFAULT"), "GENIE");
+        assert_eq!(canonical_variant_key("default"), "GENIE");
+        assert_eq!(canonical_variant_key("DeFaUlT"), "GENIE");
+    }
+
+    #[test]
+    fn test_canonical_variant_key_genie_normalized() {
+        // "GENIE" should stay as "GENIE" regardless of case
+        assert_eq!(canonical_variant_key("GENIE"), "GENIE");
+        assert_eq!(canonical_variant_key("genie"), "GENIE");
+        assert_eq!(canonical_variant_key("GeNiE"), "GENIE");
+    }
+
+    #[test]
+    fn test_canonical_variant_key_screaming_snake() {
+        // Other keys should be converted to SCREAMING_SNAKE_CASE
+        assert_eq!(canonical_variant_key("PLAN"), "PLAN");
+        assert_eq!(canonical_variant_key("plan"), "PLAN");
+        assert_eq!(canonical_variant_key("PlanMode"), "PLAN_MODE");
+        assert_eq!(canonical_variant_key("plan-mode"), "PLAN_MODE");
+        assert_eq!(canonical_variant_key("router"), "ROUTER");
+        assert_eq!(canonical_variant_key("ROUTER"), "ROUTER");
     }
 }
