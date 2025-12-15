@@ -414,3 +414,35 @@ pub fn to_default_variant(id: &ExecutorProfileId) -> ExecutorProfileId {
         variant: None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_canonical_variant_key_default_to_genie() {
+        // Legacy "DEFAULT" should map to "GENIE" for backward compatibility
+        assert_eq!(canonical_variant_key("DEFAULT"), "GENIE");
+        assert_eq!(canonical_variant_key("default"), "GENIE");
+        assert_eq!(canonical_variant_key("DeFaUlT"), "GENIE");
+    }
+
+    #[test]
+    fn test_canonical_variant_key_genie_normalized() {
+        // "GENIE" should stay as "GENIE" regardless of case
+        assert_eq!(canonical_variant_key("GENIE"), "GENIE");
+        assert_eq!(canonical_variant_key("genie"), "GENIE");
+        assert_eq!(canonical_variant_key("GeNiE"), "GENIE");
+    }
+
+    #[test]
+    fn test_canonical_variant_key_screaming_snake() {
+        // Other keys should be converted to SCREAMING_SNAKE_CASE
+        assert_eq!(canonical_variant_key("PLAN"), "PLAN");
+        assert_eq!(canonical_variant_key("plan"), "PLAN");
+        assert_eq!(canonical_variant_key("PlanMode"), "PLAN_MODE");
+        assert_eq!(canonical_variant_key("plan-mode"), "PLAN_MODE");
+        assert_eq!(canonical_variant_key("router"), "ROUTER");
+        assert_eq!(canonical_variant_key("ROUTER"), "ROUTER");
+    }
+}
