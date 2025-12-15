@@ -60,6 +60,7 @@ async fn get_kanban_tasks(
   t.description,
   t.status                        AS "status",
   t.parent_task_attempt           AS "parent_task_attempt",
+  t.dev_server_id                 AS "dev_server_id",
   t.created_at                    AS "created_at",
   t.updated_at                    AS "updated_at",
 
@@ -111,10 +112,20 @@ ORDER BY t.created_at DESC"#;
     let mut items: Vec<TaskWithAttemptStatus> = Vec::with_capacity(rows.len());
     for row in rows {
         use sqlx::Row;
-        let task_id: Uuid = row.try_get("id")?;
-        let task = Task::find_by_id(pool, task_id)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)?;
+
+        // Build Task directly from row (eliminates N+1 query)
+        let status_str: String = row.try_get("status")?;
+        let task = Task {
+            id: row.try_get("id")?,
+            project_id: row.try_get("project_id")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+            status: status_str.parse().unwrap_or(TaskStatus::Todo),
+            parent_task_attempt: row.try_get("parent_task_attempt").ok().flatten(),
+            dev_server_id: row.try_get("dev_server_id").ok().flatten(),
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+        };
 
         let has_in_progress_attempt = row
             .try_get::<i64, _>("has_in_progress_attempt")
