@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!: Uuid\",\n                          project_id AS \"project_id!: Uuid\",\n                          branch,\n                          target_branch,\n                          executor AS \"executor!\",\n                          container_ref,\n                          prompt,\n                          worktree_deleted AS \"worktree_deleted!: bool\",\n                          created_at AS \"created_at!: DateTime<Utc>\",\n                          updated_at AS \"updated_at!: DateTime<Utc>\"\n                   FROM execution_runs\n                   ORDER BY created_at DESC",
+  "query": "SELECT er.id AS \"id!: Uuid\",\n                      er.project_id AS \"project_id!: Uuid\",\n                      er.branch,\n                      er.target_branch,\n                      er.executor AS \"executor!\",\n                      er.variant,\n                      er.container_ref,\n                      er.prompt,\n                      er.worktree_deleted AS \"worktree_deleted!: bool\",\n                      er.created_at AS \"created_at!: DateTime<Utc>\",\n                      er.updated_at AS \"updated_at!: DateTime<Utc>\"\n               FROM execution_runs er\n               JOIN projects p ON er.project_id = p.id\n               WHERE er.id = $1 AND p.id = $2",
   "describe": {
     "columns": [
       {
@@ -29,33 +29,38 @@
         "type_info": "Text"
       },
       {
-        "name": "container_ref",
+        "name": "variant",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "prompt",
+        "name": "container_ref",
         "ordinal": 6,
         "type_info": "Text"
       },
       {
-        "name": "worktree_deleted!: bool",
+        "name": "prompt",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "worktree_deleted!: bool",
+        "ordinal": 8,
         "type_info": "Bool"
       },
       {
         "name": "created_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Text"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 2
     },
     "nullable": [
       true,
@@ -64,11 +69,12 @@
       false,
       false,
       true,
+      true,
       false,
       false,
       false,
       false
     ]
   },
-  "hash": "f5693f45ebacdd02eaafccd404e27d3b187a59faf97e30f6c3b809b4b263e0a8"
+  "hash": "1b96367804b5b0aee316ecced6d44439c7dc9e8f480fc9262e5f96382b6581e2"
 }
