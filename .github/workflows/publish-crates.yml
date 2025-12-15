@@ -80,6 +80,8 @@ jobs:
         run: rustup default nightly-2025-12-04
 
       - name: Verify build
+        env:
+          SQLX_OFFLINE: true
         run: cargo +nightly-2025-12-04 check --workspace
 
       - name: Check if crates already published
@@ -105,6 +107,7 @@ jobs:
       - name: Publish crates with rollback safety
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          SQLX_OFFLINE: true
         run: |
           VERSION="${{ needs.extract-version.outputs.version }}"
           PUBLISHED_CRATES=""
