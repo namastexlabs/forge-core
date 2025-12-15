@@ -2,12 +2,12 @@
 //!
 //! Ported from forge-extensions/omni/tests/client_tests.rs
 
-use super::client::OmniClient;
-use super::types::SendTextRequest;
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{header, method, path},
 };
+
+use super::{client::OmniClient, types::SendTextRequest};
 
 // NOTE: All API keys and secrets in this test file are fake test values only.
 // They are used solely for testing HTTP header functionality and are not real credentials.
@@ -205,7 +205,7 @@ async fn test_send_text_connection_failure() {
         error_msg.contains("dns")
             || error_msg.contains("connection")
             || error_msg.contains("resolve")
-            || error_msg.contains("error"),
+            || error_msg.contains("sending request"),
         "Error should indicate connection failure, got: {error}"
     );
 }
@@ -305,6 +305,12 @@ async fn test_list_instances_error() {
     let result = client.list_instances().await;
 
     assert!(result.is_err());
+    let error = result.unwrap_err();
+    let error_msg = error.to_string();
+    assert!(
+        error_msg.contains("500") || error_msg.contains("error"),
+        "Error should indicate server failure, got: {error_msg}"
+    );
 }
 
 /// Test request body formatting - verify JSON structure
