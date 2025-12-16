@@ -11,10 +11,11 @@ on:
         default: "prerelease"
         type: choice
         options:
+          - prerelease
+          - stable
           - patch
           - minor
           - major
-          - prerelease
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -77,6 +78,16 @@ jobs:
                   new_version="${base_version}-rc.${new_rc}"
                 else
                   new_version="${base_version}-rc.1"
+                fi
+                ;;
+              stable)
+                # Promote RC to stable (remove -rc.N suffix)
+                if [[ "$current_version" == *"-rc."* ]]; then
+                  new_version="${base_version}"
+                  echo "🎉 Promoting RC to stable: $current_version → $new_version"
+                else
+                  echo "⚠️ Already a stable version: $current_version"
+                  new_version="$current_version"
                 fi
                 ;;
               patch)
