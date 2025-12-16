@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.7-rc.38"
+version = "0.8.7-rc.39"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/namastexlabs/forge-core"
@@ -22,13 +22,13 @@ categories = ["development-tools"]
 
 [workspace.dependencies]
 # Internal forge-core crates (for workspace inheritance)
-forge-core-utils = { path = "crates/utils", version = "0.8.7-rc.38" }
-forge-core-executors = { path = "crates/executors", version = "0.8.7-rc.38" }
-forge-core-db = { path = "crates/db", version = "0.8.7-rc.38" }
-forge-core-services = { path = "crates/services", version = "0.8.7-rc.38" }
-forge-core-deployment = { path = "crates/deployment", version = "0.8.7-rc.38" }
-forge-core-local-deployment = { path = "crates/local-deployment", version = "0.8.7-rc.38" }
-forge-core-server = { path = "crates/server", version = "0.8.7-rc.38" }
+forge-core-utils = { path = "crates/utils", version = "0.8.7-rc.39" }
+forge-core-executors = { path = "crates/executors", version = "0.8.7-rc.39" }
+forge-core-db = { path = "crates/db", version = "0.8.7-rc.39" }
+forge-core-services = { path = "crates/services", version = "0.8.7-rc.39" }
+forge-core-deployment = { path = "crates/deployment", version = "0.8.7-rc.39" }
+forge-core-local-deployment = { path = "crates/local-deployment", version = "0.8.7-rc.39" }
+forge-core-server = { path = "crates/server", version = "0.8.7-rc.39" }
 
 # Forge-core dependencies
 tower-http = { version = "0.5", features = ["cors"] }
