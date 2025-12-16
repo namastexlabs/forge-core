@@ -8,7 +8,7 @@ name: Check Release Intent
 on:
   pull_request:
     types: [closed]
-    branches: [dev]
+    branches: [main]
 
 jobs:
   check:
@@ -63,7 +63,7 @@ jobs:
             -d '{
               "repo": "${{ github.repository }}",
               "pr": ${{ github.event.pull_request.number }},
-              "branch": "dev",
+              "branch": "main",
               "type": "rc",
               "title": "${{ github.event.pull_request.title }}",
               "sha": "${{ github.event.pull_request.merge_commit_sha }}"
