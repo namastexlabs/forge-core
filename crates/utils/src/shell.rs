@@ -7,7 +7,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use tokio::sync::OnceCell;
+
 use crate::tokio::block_on;
+
+/// Cache for the expensive PATH refresh operation.
+/// This is only computed once per process lifetime since PATH rarely changes during execution.
+/// Using tokio::sync::OnceCell ensures concurrent callers WAIT for the first computation
+/// rather than all computing simultaneously (which was the bug with std::sync::OnceLock).
+static PATH_REFRESH_RESULT: OnceCell<Option<String>> = OnceCell::const_new();
 
 /// Returns the appropriate shell command and argument for the current platform.
 ///
@@ -53,16 +61,20 @@ pub async fn resolve_executable_path(executable: &str) -> Option<PathBuf> {
         return Some(path.to_path_buf());
     }
 
+    // Try finding in current PATH first (fast path)
     if let Some(found) = which(executable).await {
         return Some(found);
     }
 
-    if refresh_path().await
-        && let Some(found) = which(executable).await
-    {
-        return Some(found);
+    // Slow path: refresh PATH from login shells
+    if refresh_path().await {
+        if let Some(found) = which(executable).await {
+            tracing::debug!(executable, ?found, "Found executable after PATH refresh");
+            return Some(found);
+        }
     }
 
+    tracing::debug!(executable, "Executable not found");
     None
 }
 
@@ -99,7 +111,7 @@ async fn refresh_path() -> bool {
     if merged == existing {
         return false;
     }
-    tracing::debug!(?existing, ?refreshed, ?merged, "Refreshed PATH");
+    tracing::debug!("Refreshed PATH with new entries");
     unsafe {
         std::env::set_var("PATH", &merged);
     }
@@ -114,8 +126,22 @@ async fn which(executable: &str) -> Option<PathBuf> {
         .and_then(|result| result.ok())
 }
 
+/// Get fresh PATH from login shells, with caching to avoid repeated delays.
+/// First call computes the result (expensive), subsequent calls return cached value instantly.
+/// Uses get_or_init() to ensure concurrent callers WAIT for the first computation
+/// rather than all computing simultaneously.
 #[cfg(not(windows))]
 async fn get_fresh_path() -> Option<String> {
+    PATH_REFRESH_RESULT
+        .get_or_init(|| async { get_fresh_path_impl().await })
+        .await
+        .clone()
+}
+
+/// Internal implementation that actually spawns login shells to get fresh PATH.
+/// This is expensive and should only be called once via get_fresh_path().
+#[cfg(not(windows))]
+async fn get_fresh_path_impl() -> Option<String> {
     use std::time::Duration;
 
     use tokio::process::Command;
@@ -140,22 +166,7 @@ async fn get_fresh_path() -> Option<String> {
         .await
         {
             Ok(Ok(output)) => output,
-            Ok(Err(err)) => {
-                tracing::debug!(
-                    shell = %shell.display(),
-                    ?err,
-                    "Failed to retrieve PATH from login shell"
-                );
-                return None;
-            }
-            Err(_) => {
-                tracing::warn!(
-                    shell = %shell.display(),
-                    timeout_secs = PATH_REFRESH_COMMAND_TIMEOUT.as_secs(),
-                    "Timed out retrieving PATH from login shell"
-                );
-                return None;
-            }
+            Ok(Err(_)) | Err(_) => return None,
         };
 
         if !output.status.success() {
@@ -173,6 +184,7 @@ async fn get_fresh_path() -> Option<String> {
         (PathBuf::from("/bin/sh"), false),
     ];
 
+    // Try $SHELL first
     let mut current_shell_name = None;
     if let Ok(shell) = std::env::var("SHELL") {
         let path = Path::new(&shell);
@@ -184,6 +196,7 @@ async fn get_fresh_path() -> Option<String> {
         }
     }
 
+    // Try other shells
     for (shell_path, login) in shells {
         if !shell_path.exists() {
             continue;
@@ -192,9 +205,10 @@ async fn get_fresh_path() -> Option<String> {
             .file_name()
             .and_then(OsStr::to_str)
             .map(String::from);
-        if current_shell_name != shell_name
-            && let Some(path) = run(&shell_path, login).await
-        {
+        if current_shell_name == shell_name {
+            continue;
+        }
+        if let Some(path) = run(&shell_path, login).await {
             paths.push(path);
         }
     }
