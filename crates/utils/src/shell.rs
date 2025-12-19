@@ -67,11 +67,11 @@ pub async fn resolve_executable_path(executable: &str) -> Option<PathBuf> {
     }
 
     // Slow path: refresh PATH from login shells
-    if refresh_path().await {
-        if let Some(found) = which(executable).await {
-            tracing::debug!(executable, ?found, "Found executable after PATH refresh");
-            return Some(found);
-        }
+    if refresh_path().await
+        && let Some(found) = which(executable).await
+    {
+        tracing::debug!(executable, ?found, "Found executable after PATH refresh");
+        return Some(found);
     }
 
     tracing::debug!(executable, "Executable not found");
@@ -166,10 +166,30 @@ async fn get_fresh_path_impl() -> Option<String> {
         .await
         {
             Ok(Ok(output)) => output,
-            Ok(Err(_)) | Err(_) => return None,
+            Ok(Err(err)) => {
+                tracing::debug!(
+                    shell = %shell.display(),
+                    error = %err,
+                    "PATH refresh: shell execution failed"
+                );
+                return None;
+            }
+            Err(_) => {
+                tracing::warn!(
+                    shell = %shell.display(),
+                    timeout_secs = PATH_REFRESH_COMMAND_TIMEOUT.as_secs(),
+                    "PATH refresh: shell timed out"
+                );
+                return None;
+            }
         };
 
         if !output.status.success() {
+            tracing::debug!(
+                shell = %shell.display(),
+                exit_code = output.status.code(),
+                "PATH refresh: shell returned non-zero exit code"
+            );
             return None;
         }
         let path = String::from_utf8(output.stdout).ok()?.trim().to_string();

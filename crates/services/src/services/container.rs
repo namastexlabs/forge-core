@@ -577,6 +577,184 @@ pub trait ContainerService {
         Ok(execution_process)
     }
 
+    /// Start attempt with an existing ExecutionProcess (for early failure tracking)
+    ///
+    /// Unlike `start_attempt`, this takes an existing execution process ID that was
+    /// created with `Initializing` status. This method:
+    /// 1. Creates the container/worktree
+    /// 2. Builds the real executor action with the actual prompt
+    /// 3. Updates the existing ExecutionProcess with real action and Running status
+    /// 4. Starts the actual execution
+    ///
+    /// If any step fails, the caller is responsible for marking the EP as Failed.
+    async fn start_attempt_with_process(
+        &self,
+        task_attempt: &TaskAttempt,
+        executor_profile_id: ExecutorProfileId,
+        existing_process_id: Uuid,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        // Create container
+        self.create(task_attempt).await?;
+
+        // Get parent task
+        let task = task_attempt
+            .parent_task(&self.db().pool)
+            .await?
+            .ok_or(SqlxError::RowNotFound)?;
+
+        // Get parent project
+        let project = task
+            .parent_project(&self.db().pool)
+            .await?
+            .ok_or(SqlxError::RowNotFound)?;
+
+        // Get latest version of task attempt
+        let task_attempt = TaskAttempt::find_by_id(&self.db().pool, task_attempt.id)
+            .await?
+            .ok_or(SqlxError::RowNotFound)?;
+
+        // Get worktree path
+        let worktree_path = PathBuf::from(
+            task_attempt
+                .container_ref
+                .as_ref()
+                .ok_or_else(|| ContainerError::Other(anyhow!("Container ref not found")))?,
+        );
+        let prompt = ImageService::canonicalise_image_paths(&task.to_prompt(), &worktree_path);
+
+        let cleanup_action = self.cleanup_action(project.cleanup_script);
+
+        // Capture current HEAD as the "before" commit
+        let before_head_commit = {
+            if let Some(container_ref) = &task_attempt.container_ref {
+                let wt = std::path::Path::new(container_ref);
+                self.git().get_head_info(wt).ok().map(|h| h.oid)
+            } else {
+                None
+            }
+        };
+
+        // Update task status to InProgress
+        if task.status != TaskStatus::InProgress {
+            Task::update_status(&self.db().pool, task.id, TaskStatus::InProgress).await?;
+        }
+
+        // Build the real executor action based on setup script presence
+        let executor_action = if let Some(setup_script) = project.setup_script {
+            ExecutorAction::new(
+                ExecutorActionType::ScriptRequest(ScriptRequest {
+                    script: setup_script,
+                    language: ScriptRequestLanguage::Bash,
+                    context: ScriptContext::SetupScript,
+                }),
+                Some(Box::new(ExecutorAction::new(
+                    ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+                        prompt: prompt.clone(),
+                        executor_profile_id: executor_profile_id.clone(),
+                    }),
+                    cleanup_action,
+                ))),
+            )
+        } else {
+            ExecutorAction::new(
+                ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+                    prompt: prompt.clone(),
+                    executor_profile_id: executor_profile_id.clone(),
+                }),
+                cleanup_action,
+            )
+        };
+
+        // Update existing execution process with real action, status, and before_head_commit
+        // Transition: Initializing -> Running
+        ExecutionProcess::update_executor_action(
+            &self.db().pool,
+            existing_process_id,
+            &executor_action,
+            Some(ExecutionProcessStatus::Running),
+        )
+        .await?;
+
+        // Update before_head_commit if we captured it
+        if let Some(commit) = &before_head_commit {
+            ExecutionProcess::update_before_head_commit(
+                &self.db().pool,
+                existing_process_id,
+                commit,
+            )
+            .await?;
+        }
+
+        // Get the updated execution process
+        let execution_process = ExecutionProcess::find_by_id(&self.db().pool, existing_process_id)
+            .await?
+            .ok_or(SqlxError::RowNotFound)?;
+
+        // Create executor session if this is a coding agent request
+        if let Some(prompt) = match executor_action.typ() {
+            ExecutorActionType::CodingAgentInitialRequest(coding_agent_request) => {
+                Some(coding_agent_request.prompt.clone())
+            }
+            ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request) => {
+                Some(follow_up_request.prompt.clone())
+            }
+            _ => None,
+        } {
+            let create_executor_data = CreateExecutorSession {
+                task_attempt_id: Some(task_attempt.id),
+                execution_process_id: execution_process.id,
+                prompt: Some(prompt),
+            };
+
+            let executor_session_record_id = Uuid::new_v4();
+
+            ExecutorSession::create(
+                &self.db().pool,
+                &create_executor_data,
+                executor_session_record_id,
+            )
+            .await?;
+        }
+
+        // Start the actual execution
+        if let Err(start_error) = self
+            .start_execution_inner(&task_attempt, &execution_process, &executor_action)
+            .await
+        {
+            // Mark process as failed
+            if let Err(update_error) = ExecutionProcess::update_completion(
+                &self.db().pool,
+                execution_process.id,
+                ExecutionProcessStatus::Failed,
+                None,
+            )
+            .await
+            {
+                tracing::error!(
+                    "Failed to mark execution process {} as failed after start error: {}",
+                    execution_process.id,
+                    update_error
+                );
+            }
+            Task::update_status(&self.db().pool, task.id, TaskStatus::InReview).await?;
+
+            // Emit stderr error message
+            let log_message = LogMsg::Stderr(format!("Failed to start execution: {start_error}"));
+            if let Ok(json_line) = serde_json::to_string(&log_message) {
+                let _ = ExecutionProcessLogs::append_log_line(
+                    &self.db().pool,
+                    execution_process.id,
+                    &format!("{json_line}\n"),
+                )
+                .await;
+            }
+
+            return Err(start_error);
+        }
+
+        Ok(execution_process)
+    }
+
     async fn start_execution(
         &self,
         task_attempt: &TaskAttempt,

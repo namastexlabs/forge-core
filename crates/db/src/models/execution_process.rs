@@ -33,6 +33,8 @@ pub enum ExecutionProcessError {
 #[serde(rename_all = "lowercase")]
 #[ts(use_ts_enum)]
 pub enum ExecutionProcessStatus {
+    /// Process created, startup in progress (container/worktree being set up)
+    Initializing,
     Running,
     Completed,
     Failed,
@@ -324,12 +326,30 @@ impl ExecutionProcess {
         .await
     }
 
-    /// Create a new execution process
+    /// Create a new execution process (defaults to Running status)
     pub async fn create(
         pool: &SqlitePool,
         data: &CreateExecutionProcess,
         process_id: Uuid,
         before_head_commit: Option<&str>,
+    ) -> Result<Self, sqlx::Error> {
+        Self::create_with_status(
+            pool,
+            data,
+            process_id,
+            before_head_commit,
+            ExecutionProcessStatus::Running,
+        )
+        .await
+    }
+
+    /// Create a new execution process with explicit status
+    pub async fn create_with_status(
+        pool: &SqlitePool,
+        data: &CreateExecutionProcess,
+        process_id: Uuid,
+        before_head_commit: Option<&str>,
+        status: ExecutionProcessStatus,
     ) -> Result<Self, sqlx::Error> {
         let now = Utc::now();
         let executor_action_json = sqlx::types::Json(&data.executor_action);
@@ -348,7 +368,7 @@ impl ExecutionProcess {
             data.run_reason,
             executor_action_json,
             before_head_commit,
-            ExecutionProcessStatus::Running,
+            status,
             None::<i64>,
             now,
             None::<DateTime<Utc>>,
@@ -357,6 +377,62 @@ impl ExecutionProcess {
         )
         .fetch_one(pool)
         .await
+    }
+
+    /// Update only the status of an execution process
+    pub async fn update_status(
+        pool: &SqlitePool,
+        id: Uuid,
+        status: ExecutionProcessStatus,
+    ) -> Result<(), sqlx::Error> {
+        let now = Utc::now();
+        sqlx::query!(
+            r#"UPDATE execution_processes SET status = ?, updated_at = ? WHERE id = ?"#,
+            status,
+            now,
+            id
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Update executor_action and optionally status (for transitioning from Initializing)
+    pub async fn update_executor_action(
+        pool: &SqlitePool,
+        id: Uuid,
+        executor_action: &ExecutorAction,
+        status: Option<ExecutionProcessStatus>,
+    ) -> Result<(), sqlx::Error> {
+        let now = Utc::now();
+        let action_json =
+            serde_json::to_string(executor_action).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+
+        if let Some(new_status) = status {
+            sqlx::query!(
+                r#"UPDATE execution_processes
+                   SET executor_action = ?, status = ?, updated_at = ?
+                   WHERE id = ?"#,
+                action_json,
+                new_status,
+                now,
+                id
+            )
+            .execute(pool)
+            .await?;
+        } else {
+            sqlx::query!(
+                r#"UPDATE execution_processes
+                   SET executor_action = ?, updated_at = ?
+                   WHERE id = ?"#,
+                action_json,
+                now,
+                id
+            )
+            .execute(pool)
+            .await?;
+        }
+        Ok(())
     }
 
     pub async fn was_stopped(pool: &SqlitePool, id: Uuid) -> bool {

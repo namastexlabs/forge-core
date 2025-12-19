@@ -63,11 +63,21 @@ async fn main() -> Result<(), AutomagikForgeError> {
     tokio::spawn(async {
         tracing::debug!("Pre-warming PATH resolution cache...");
         let start = std::time::Instant::now();
-        let _ = resolve_executable_path("npx").await;
-        tracing::debug!(
-            elapsed_ms = start.elapsed().as_millis(),
-            "PATH resolution cache warmed"
-        );
+        match resolve_executable_path("npx").await {
+            Some(path) => {
+                tracing::info!(
+                    path = %path.display(),
+                    elapsed_ms = start.elapsed().as_millis(),
+                    "PATH cache warmed: npx found"
+                );
+            }
+            None => {
+                tracing::warn!(
+                    elapsed_ms = start.elapsed().as_millis(),
+                    "PATH cache warmed but npx NOT FOUND - tasks may fail to start"
+                );
+            }
+        }
     });
 
     // Pre-warm file search cache for most active projects

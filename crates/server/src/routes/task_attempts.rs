@@ -15,7 +15,9 @@ use axum::{
 };
 use forge_core_db::models::{
     draft::{Draft, DraftType},
-    execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
+    execution_process::{
+        CreateExecutionProcess, ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus,
+    },
     executor_session::ExecutorSession,
     merge::{Merge, MergeStatus, PrMerge, PullRequestInfo},
     project::{Project, ProjectError},
@@ -27,6 +29,7 @@ use forge_core_executors::{
     actions::{
         ExecutorAction, ExecutorActionType,
         coding_agent_follow_up::CodingAgentFollowUpRequest,
+        coding_agent_initial::CodingAgentInitialRequest,
         script::{ScriptContext, ScriptRequest, ScriptRequestLanguage},
     },
     executors::{CodingAgent, ExecutorError},
@@ -233,18 +236,80 @@ pub async fn create_task_attempt(
 
     // P0 Performance Fix: Return HTTP immediately, start attempt in background
     // This reduces perceived latency from ~42s to <1s for first message
+    //
+    // IMPORTANT: Create ExecutionProcess with Initializing status BEFORE spawning
+    // This ensures clients can track startup lifecycle via SSE:
+    //   Initializing -> Running (success) or Initializing -> Failed (error)
+    // Without this, early failures (worktree setup) would be invisible to clients.
+
+    // Create placeholder action - will be updated with real action during startup
+    let placeholder_action = ExecutorAction::new(
+        ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+            prompt: String::new(), // Placeholder - updated during actual startup
+            executor_profile_id: executor_profile_id.clone(),
+        }),
+        None,
+    );
+
+    // Create ExecutionProcess with Initializing status - client sees startup began
+    let execution_process_id = Uuid::new_v4();
+    let execution_process = ExecutionProcess::create_with_status(
+        &deployment.db().pool,
+        &CreateExecutionProcess {
+            task_attempt_id: Some(task_attempt.id),
+            execution_run_id: None,
+            executor_action: placeholder_action,
+            run_reason: ExecutionProcessRunReason::CodingAgent,
+        },
+        execution_process_id,
+        None, // before_head_commit captured during actual startup
+        ExecutionProcessStatus::Initializing,
+    )
+    .await?;
+
     let task_attempt_for_spawn = task_attempt.clone();
     let deployment_for_spawn = deployment.clone();
     let executor_profile_for_spawn = executor_profile_id.clone();
+    let ep_id = execution_process.id;
 
     tokio::spawn(async move {
         let attempt_result = deployment_for_spawn
             .container()
-            .start_attempt(&task_attempt_for_spawn, executor_profile_for_spawn.clone())
+            .start_attempt_with_process(
+                &task_attempt_for_spawn,
+                executor_profile_for_spawn.clone(),
+                ep_id,
+            )
             .await;
 
-        if let Err(err) = &attempt_result {
-            tracing::error!("Failed to start task attempt: {}", err);
+        match &attempt_result {
+            Ok(_) => {
+                tracing::info!(
+                    attempt_id = %task_attempt_for_spawn.id,
+                    "Task attempt started successfully"
+                );
+            }
+            Err(err) => {
+                tracing::error!(
+                    attempt_id = %task_attempt_for_spawn.id,
+                    error = %err,
+                    "Failed to start task attempt"
+                );
+                // Transition: Initializing -> Failed - SSE notifies clients
+                if let Err(update_err) = ExecutionProcess::update_status(
+                    &deployment_for_spawn.db().pool,
+                    ep_id,
+                    ExecutionProcessStatus::Failed,
+                )
+                .await
+                {
+                    tracing::error!(
+                        execution_process_id = %ep_id,
+                        error = %update_err,
+                        "Failed to mark execution process as failed"
+                    );
+                }
+            }
         }
 
         // Track analytics after attempt starts (or fails)
