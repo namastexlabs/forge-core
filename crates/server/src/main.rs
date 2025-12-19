@@ -6,6 +6,7 @@ use forge_core_utils::{
     browser::open_browser,
     port_file::write_port_file,
     sentry::{self as sentry_utils, SentrySource, sentry_layer},
+    shell::resolve_executable_path,
 };
 use sqlx::Error as SqlxError;
 use strip_ansi_escapes::strip;
@@ -56,9 +57,35 @@ async fn main() -> Result<(), AutomagikForgeError> {
         .track_if_analytics_allowed("session_start", serde_json::json!({}))
         .await;
 
+    // P0 Performance Fix: Pre-warm PATH resolution cache in background
+    // This resolves `npx` path at startup, avoiding 30+ second delay on first task
+    // The OnceLock in shell.rs caches the result for the lifetime of the process
+    tokio::spawn(async {
+        tracing::debug!("Pre-warming PATH resolution cache...");
+        let start = std::time::Instant::now();
+        match resolve_executable_path("npx").await {
+            Some(path) => {
+                tracing::info!(
+                    path = %path.display(),
+                    elapsed_ms = start.elapsed().as_millis(),
+                    "PATH cache warmed: npx found"
+                );
+            }
+            None => {
+                tracing::warn!(
+                    elapsed_ms = start.elapsed().as_millis(),
+                    "PATH cache warmed but npx NOT FOUND - tasks may fail to start"
+                );
+            }
+        }
+    });
+
     // Pre-warm file search cache for most active projects
+    // P2 Performance Fix: Delay 30s to avoid I/O contention with first task
     let deployment_for_cache = deployment.clone();
     tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        tracing::debug!("Starting file search cache warming after 30s delay");
         if let Err(e) = deployment_for_cache
             .file_search_cache()
             .warm_most_active(&deployment_for_cache.db().pool, 3)

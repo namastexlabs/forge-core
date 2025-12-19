@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE execution_processes\n                   SET executor_action = ?, updated_at = ?\n                   WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "520bb43d93e520a05c0d748f3ebe8fac8facfbd19c7928ead5e54a277a952d2c"
+}

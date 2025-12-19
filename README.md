@@ -59,3 +59,4 @@ This will start the backend. A blank DB will be copied from the `dev_assets_seed
 - `HOST`: Server host (default: 127.0.0.1)
 
 See `CLAUDE.md` for more details.
+
